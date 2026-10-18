@@ -92,8 +92,13 @@ namespace Cthangover.BaseMenu
                 ReloadRequired = false;
         }
 
+        /// <summary>
+        /// The game is loaded and still matches its collection — only then can it
+        /// be entered without a mod-set switch (an edited collection must apply).
+        /// </summary>
         private static bool IsRunning(string gameId)
-            => ActiveGame.IsActive && string.Equals(ActiveGame.Id, gameId, StringComparison.OrdinalIgnoreCase);
+            => ActiveGame.IsActive && string.Equals(ActiveGame.Id, gameId, StringComparison.OrdinalIgnoreCase)
+               && !GameCatalog.IsActiveOutdated();
 
         /// <summary>Lists what a composition change does to the save, in player terms.</summary>
         public static string DescribeDiff(SaveCompositionDiff diff)
