@@ -83,7 +83,7 @@ namespace Mods.MenuFlowTest
                         return;
                     Check("front-end only", ActiveGame.IsFrontendOnly && !ActiveGame.IsActive);
                     Check("menu mods loaded", ModRegistry.Instance.Mods.ContainsKey("menu_base") && ModRegistry.Instance.Mods.ContainsKey("mod_manager"));
-                    Check("game content not loaded", !ModRegistry.Instance.Mods.ContainsKey("cthangover_story"));
+                    Check("game content not loaded", !ModRegistry.Instance.Mods.ContainsKey("cthangover_game"));
                     Check("Play button shown", Menu.FindChild("play", true, false) is Button);
                     Check("New game hidden without a game", Menu.FindChild("new_game", true, false) == null);
                     break;
@@ -160,7 +160,7 @@ namespace Mods.MenuFlowTest
                     var composition = GameCatalog.Composition(GameId);
                     Check("composition computed without loading the game", composition?.Any(m => m.Id == "novel_template") == true);
                     var diff = SaveCompositionDiff.Compute(
-                        new[] { new SaveGameMod { Id = "cthangover_story", Version = "2.0.0" }, new SaveGameMod { Id = "ghost_mechanic", Version = "1.0.0" } },
+                        new[] { new SaveGameMod { Id = "cthangover_game", Version = "2.0.0" }, new SaveGameMod { Id = "ghost_mechanic", Version = "1.0.0" } },
                         composition);
                     Check("comparison reports removed and added mechanics", diff.Removed.Contains("ghost_mechanic") && diff.Added.Contains("novel_template"));
 
