@@ -158,11 +158,11 @@ namespace Mods.MenuFlowTest
                     browser.Visible = false;
 
                     var composition = GameCatalog.Composition(GameId);
-                    Check("composition computed without loading the game", composition?.Any(m => m.Id == "novel_template") == true);
+                    Check("composition computed without loading the game", composition?.Any(m => m.Id == "my_novel_game") == true);
                     var diff = SaveCompositionDiff.Compute(
                         new[] { new SaveGameMod { Id = "cthangover_game", Version = "2.0.0" }, new SaveGameMod { Id = "ghost_mechanic", Version = "1.0.0" } },
                         composition);
-                    Check("comparison reports removed and added mechanics", diff.Removed.Contains("ghost_mechanic") && diff.Added.Contains("novel_template"));
+                    Check("comparison reports removed and added mechanics", diff.Removed.Contains("ghost_mechanic") && diff.Added.Contains("my_novel_game"));
 
                     LastSessionStore.Record(GameId, Slot);
                     Check("Continue sees the last session", LastSessionStore.Load()?.GameId == GameId);
