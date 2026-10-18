@@ -76,7 +76,7 @@ namespace Mods.SaveDormancyTest
             var absentSlot = new ModSlot { Metadata = new ModMetadata { ModId = AbsentMod, ModVersion = "1.1.0" } };
             absentSlot.Data["marker"] = new DataBlob(1, new Dictionary<string, string> { ["value"] = "42" });
             package.ModData[AbsentMod] = absentSlot;
-            package.ModData.Remove("base_menu__save_dormancy");
+            package.ModData.Remove("menu_base__save_dormancy");
             File.WriteAllText(pathA, JsonSerializer.Serialize(package, JsonOptionsProvider.WriteCompactOptions));
 
             SaveDormancyProbe.Joined = false;
@@ -93,7 +93,7 @@ namespace Mods.SaveDormancyTest
                                             && marker.ReadJson<Dictionary<string, string>>().GetValueOrDefault("value") == "42");
             Check("live mods still saved", resaved?.ModData?.ContainsKey(SavePackage.CoreSlotKey) == true);
 
-            var message = ModSettingsRegistry.RunAction("base_menu", "purge_dormant");
+            var message = ModSettingsRegistry.RunAction("menu_base", "purge_dormant");
             Check("purge action runs from the save settings", !string.IsNullOrEmpty(message));
             Check("purge removed dormant data from the save", Read(FilePath(SlotB))?.Dormant == null);
 

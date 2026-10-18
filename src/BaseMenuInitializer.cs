@@ -17,7 +17,7 @@ namespace Cthangover.BaseMenu
     /// </summary>
     public class BaseMenuInitializer : IModInitializer
     {
-        private const string ModId = "base_menu";
+        private const string ModId = "menu_base";
 
         public void OnModLoaded(string modId)
         {

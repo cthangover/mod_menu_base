@@ -20,10 +20,10 @@ namespace Mods.NewGameTest
     /// <item>Front-end menu → Play → the <c>cthangover</c> card → New game: the
     /// process switches to the game, enters <c>prolog_alley</c> and the opening
     /// dialog about the hungover Marao is clicked through.</item>
-    /// <item>Hot reload inside the game (forced reload of <c>starter_party</c>):
+    /// <item>Hot reload inside the game (forced reload of <c>cthangover_party</c>):
     /// the session is parked, the mod reloads into a new context and the game
     /// comes back in <c>prolog_alley</c>.</item>
-    /// <item>Back to the menu → <c>card_novel</c>: mods outside that game are
+    /// <item>Back to the menu → <c>novel_template</c>: mods outside that game are
     /// unloaded and a scene of the game is entered.</item>
     /// <item>Back to the menu → <c>cthangover</c> again → <c>prolog_alley</c>.</item>
     /// </list>
@@ -38,9 +38,9 @@ namespace Mods.NewGameTest
         public const string Flag = "--itest=new_game";
 
         private const string MainGame = "cthangover";
-        private const string SecondGame = "card_novel";
+        private const string SecondGame = "novel_template";
         private const string PrologScene = "prolog_alley";
-        private const string HotReloadedMod = "starter_party";
+        private const string HotReloadedMod = "cthangover_party";
         private const float TimeoutSeconds = 420f;
 
         private readonly List<string> failures = new();
@@ -160,7 +160,7 @@ namespace Mods.NewGameTest
                     var reload = ModManager.Instance.LastReload;
                     Check("in-game hot reload applied", reload?.Applied == true);
                     Check($"hot reload reloaded '{HotReloadedMod}'", reload?.Plan?.Load.Contains(HotReloadedMod) == true);
-                    Check("hot reload kept the front-end loaded", reload?.Plan?.Keep.Contains("base_menu") == true);
+                    Check("hot reload kept the front-end loaded", reload?.Plan?.Keep.Contains("menu_base") == true);
                     Check("hot reload released every old context", reload?.Leaked.Count == 0);
                     Check($"hot reload kept the game '{MainGame}'", ActiveGame.Id == MainGame);
                     Check($"session came back in '{PrologScene}'", true);
@@ -255,7 +255,7 @@ namespace Mods.NewGameTest
         {
             var reload = ModManager.Instance.LastReload;
             Check($"switch into '{gameId}' applied", reload?.Applied == true);
-            Check($"switch into '{gameId}' kept the front-end loaded", reload?.Plan?.Keep.Contains("base_menu") == true);
+            Check($"switch into '{gameId}' kept the front-end loaded", reload?.Plan?.Keep.Contains("menu_base") == true);
             if (expectUnload)
                 Check($"switch into '{gameId}' unloaded mods outside the game", reload?.Plan?.Unload.Count > 0);
             Check($"switch into '{gameId}' released every old context", reload?.Leaked.Count == 0);

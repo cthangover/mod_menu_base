@@ -189,7 +189,7 @@ namespace Mods.HotReloadTest
 
         private static bool UnloadedAndLoadedBoth(ModSetReloadedEvent e) => UnloadedBoth(e) && LoadedBoth(e);
 
-        private static bool UnloadedBaseMenu(ModSetReloadedEvent e) => e.Unloaded.Contains("base_menu");
+        private static bool UnloadedBaseMenu(ModSetReloadedEvent e) => e.Unloaded.Contains("menu_base");
 
         private static bool IsRejectedForLib(ModSetReloadedEvent e) => !e.Applied && e.Errors.Any(IsLibError);
 

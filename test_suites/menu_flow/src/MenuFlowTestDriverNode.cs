@@ -23,7 +23,7 @@ namespace Mods.MenuFlowTest
     /// </summary>
     public partial class MenuFlowTestDriverNode : Node
     {
-        private const string GameId = "card_novel";
+        private const string GameId = "novel_template";
         private const string Slot = "slot_942";
         private const string DeletableId = "menu_flow_deletable";
         private const float TimeoutSeconds = 90f;
@@ -82,8 +82,8 @@ namespace Mods.MenuFlowTest
                     if (GetTree().CurrentScene is not MainMenu)
                         return;
                     Check("front-end only", ActiveGame.IsFrontendOnly && !ActiveGame.IsActive);
-                    Check("menu mods loaded", ModRegistry.Instance.Mods.ContainsKey("base_menu") && ModRegistry.Instance.Mods.ContainsKey("mod_manager"));
-                    Check("game content not loaded", !ModRegistry.Instance.Mods.ContainsKey("visual_novel_core"));
+                    Check("menu mods loaded", ModRegistry.Instance.Mods.ContainsKey("menu_base") && ModRegistry.Instance.Mods.ContainsKey("mod_manager"));
+                    Check("game content not loaded", !ModRegistry.Instance.Mods.ContainsKey("cthangover_story"));
                     Check("Play button shown", Menu.FindChild("play", true, false) is Button);
                     Check("New game hidden without a game", Menu.FindChild("new_game", true, false) == null);
                     break;
@@ -158,11 +158,11 @@ namespace Mods.MenuFlowTest
                     browser.Visible = false;
 
                     var composition = GameCatalog.Composition(GameId);
-                    Check("composition computed without loading the game", composition?.Any(m => m.Id == "card_battle") == true);
+                    Check("composition computed without loading the game", composition?.Any(m => m.Id == "novel_template") == true);
                     var diff = SaveCompositionDiff.Compute(
-                        new[] { new SaveGameMod { Id = "visual_novel_core", Version = "2.0.0" }, new SaveGameMod { Id = "ghost_mechanic", Version = "1.0.0" } },
+                        new[] { new SaveGameMod { Id = "cthangover_story", Version = "2.0.0" }, new SaveGameMod { Id = "ghost_mechanic", Version = "1.0.0" } },
                         composition);
-                    Check("comparison reports removed and added mechanics", diff.Removed.Contains("ghost_mechanic") && diff.Added.Contains("card_battle"));
+                    Check("comparison reports removed and added mechanics", diff.Removed.Contains("ghost_mechanic") && diff.Added.Contains("novel_template"));
 
                     LastSessionStore.Record(GameId, Slot);
                     Check("Continue sees the last session", LastSessionStore.Load()?.GameId == GameId);
@@ -191,7 +191,7 @@ namespace Mods.MenuFlowTest
                 SaveId = Slot,
                 Timestamp = DateTime.UtcNow,
                 CoreVersion = "0.1.0",
-                Game = new SaveGameInfo { Id = GameId, Name = "Card Novel", Version = "1.0.0" },
+                Game = new SaveGameInfo { Id = GameId, Name = "Novel Template", Version = "1.0.0" },
             };
             package.ModData[SavePackage.CoreSlotKey] = new ModSlot();
             var dir = ProjectSettings.GlobalizePath(SaveService.GameDirectory(GameId));

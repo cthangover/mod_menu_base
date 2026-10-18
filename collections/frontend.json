@@ -17,7 +17,7 @@
       "locale": [
         { "lang": "ru", "name": "Главное меню", "description": "Главное меню, настройки и панели сохранения/загрузки." }
       ],
-      "mods": ["base_menu>=1", "interface>=1", "audio_base>=1"]
+      "mods": ["menu_base>=1", "ui_base>=1", "audio_base>=1"]
     },
     {
       "id": "mods",
