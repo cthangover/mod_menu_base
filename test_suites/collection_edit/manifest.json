@@ -1,6 +1,6 @@
 {
   "name": "Collection Edit Test",
-  "description": "Integration test of editing the running game's collection: the novel template is entered, its collection gets the editors mechanic, back to the menu and New game of the same game must switch the mod set in-process so the editors are loaded. Activated only by --itest=collection_edit (with --game=novel_template).",
+  "description": "Integration test of editing the running game's collection: the novel template is entered, its collection gets the dev_tools toolset (editors, scenario studio), back to the menu and New game of the same game must switch the mod set in-process so the editors are loaded. Activated only by --itest=collection_edit (with --game=novel_template).",
   "sources": [
     "src/*.cs"
   ]

@@ -19,11 +19,12 @@ namespace Mods.CollectionEditTest
     /// <list type="number">
     /// <item>The novel template is entered; it matches its collection and the
     /// editors are not loaded.</item>
-    /// <item>The collection gets the editors mechanic (<c>editor_tools</c>), saved
-    /// the way the collection editor saves it (a user package with the same id):
-    /// the running game is now outdated.</item>
+    /// <item>The collection gets the developer toolset (<c>dev_tools</c>: editors,
+    /// the scenario studio, …), saved the way the collection editor saves it (a
+    /// user package with the same id): the running game is now outdated.</item>
     /// <item>Menu → Play → New game of the same game switches the mod set in
-    /// place: the editors are loaded and the game matches its collection again.</item>
+    /// place: the editors and the studio are loaded, the studio's button is on
+    /// the game's toolbar and the game matches its collection again.</item>
     /// </list>
     /// A player's own package of the game is moved aside for the run and put
     /// back afterwards. Prints <c>[TEST_RESULT] name=collection_edit</c>.
@@ -33,7 +34,9 @@ namespace Mods.CollectionEditTest
         public const string Flag = "--itest=collection_edit";
 
         private const string GameId = "novel_template";
+        private const string AddedToolset = "dev_tools";
         private const string AddedMod = "editor_tools";
+        private const string StudioMod = "scenario_studio";
         private const float TimeoutSeconds = 240f;
 
         private readonly List<string> failures = new();
@@ -132,6 +135,8 @@ namespace Mods.CollectionEditTest
                     var reload = ModManager.Instance.LastReload;
                     Check("New game after the edit switched the mod set", reload?.Applied == true && reload.Plan?.Load.Contains(AddedMod) == true);
                     Check($"'{AddedMod}' is loaded after the edit", EditorsLoaded);
+                    Check($"'{StudioMod}' is loaded after the edit", ModRegistry.Instance.Mods.ContainsKey(StudioMod));
+                    Check("the studio's button is on the game's toolbar", HasToolbarButton(TranslationServer.Translate("studio/title").ToString()));
                     Check("the game matches its edited collection", !GameCatalog.IsActiveOutdated());
                     Check($"entered a scene of '{GameId}' ('{enteredScenes[0]}')", true);
                     Finish();
@@ -143,8 +148,8 @@ namespace Mods.CollectionEditTest
         }
 
         /// <summary>
-        /// Saves the game's collection with an extra editors mechanic as a user
-        /// package — what the collection editor does when the player adds one.
+        /// Saves the game's collection with the developer toolset included, as a
+        /// user package — what the collection editor does when the player adds it.
         /// </summary>
         private void AddEditorsToCollection()
         {
@@ -152,8 +157,8 @@ namespace Mods.CollectionEditTest
             var source = GameCatalog.LoadCollections()[GameId];
             var edited = JsonSerializer.Deserialize<ModCollection>(JsonSerializer.Serialize(source));
             edited.Package = source.Package;
-            edited.Mechanics ??= new List<ModCollectionMechanic>();
-            edited.Mechanics.Add(new ModCollectionMechanic { Id = "editors", Name = "Editors", Mods = new List<string> { AddedMod + ">=1" } });
+            edited.Includes ??= new List<ModCollectionInclude>();
+            edited.Includes.Add(new ModCollectionInclude { Ref = AddedToolset + ">=1", Role = "tools" });
 
             var user = ModCollectionStore.LoadUser().Where(c => !string.Equals(c.Id, GameId, StringComparison.OrdinalIgnoreCase)).ToList();
             user.Add(edited);
@@ -187,6 +192,9 @@ namespace Mods.CollectionEditTest
                     File.Move(aside, from);
             }
         }
+
+        private bool HasToolbarButton(string tooltip)
+            => GetTree().Root.FindChildren("*", "Button", true, false).OfType<Button>().Any(b => b.TooltipText == tooltip && b.IsVisibleInTree());
 
         /// <summary>The main menu's Play button, pressed; false while it is not on screen.</summary>
         private bool PressMenuPlay()
