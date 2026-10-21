@@ -6,6 +6,7 @@ using Cthangover.Core.Bootstrap;
 using Cthangover.Core.Events;
 using Cthangover.Core.Games;
 using Cthangover.Core.Mods;
+using Cthangover.Core.Characters;
 using Cthangover.Core.Mods.HotReload;
 using Cthangover.Core.Utils;
 using Godot;
@@ -23,6 +24,8 @@ namespace Mods.HotReloadTest
     /// cascades), the old contexts are collected, the front-end stays.</item>
     /// <item>A compile error in the library is rejected: v2 keeps running.</item>
     /// <item>Fixing it (v3) reloads again.</item>
+    /// <item>Editing a character of a data-only probe (no code) is picked up by
+    /// the kept characters engine mod: its factory serves the new template.</item>
     /// <item>Dropping the probes from the selection unloads them and their node.</item>
     /// </list>
     /// Reload outcomes are read from <see cref="ModSetReloadedEvent"/>s, since
@@ -35,6 +38,8 @@ namespace Mods.HotReloadTest
 
         private const string LibId = "hot_reload_probe_lib";
         private const string AppId = "hot_reload_probe_app";
+        private const string DataId = "hot_reload_probe_data";
+        private const string ProbeCharacterId = "hot_reload_probe_character";
         private const string ProbeNodeName = "HotReloadProbeNode";
         private const float TimeoutSeconds = 300f;
 
@@ -109,8 +114,9 @@ namespace Mods.HotReloadTest
                         return;
                     Check("hot reload watcher is installed", ModHotReloadService.Instance != null);
                     startSelection = GameLaunchArgs.Current;
-                    GameLaunchArgs.SetCurrent(GameLaunchArgs.Parse(startSelection.UserArgs.Concat(new[] { GameLaunchArgs.WithModsPrefix + AppId })));
+                    GameLaunchArgs.SetCurrent(GameLaunchArgs.Parse(startSelection.UserArgs.Concat(new[] { GameLaunchArgs.WithModsPrefix + AppId + "," + DataId })));
                     reloads.Clear();
+                    WriteData("probe_v1");
                     WriteProbes("v1");
                     break;
 
@@ -118,6 +124,7 @@ namespace Mods.HotReloadTest
                     if (Busy || ProbeValue() != "v1")
                         return;
                     Check("probes loaded by the watcher", AnyApplied(LoadedBoth));
+                    Check("data probe's character is served", ProbeCharacterName() == "probe_v1");
                     CheckNoLeaks("v1");
                     reloads.Clear();
                     WriteLib("v2", compiles: true);
@@ -148,11 +155,19 @@ namespace Mods.HotReloadTest
                     Check("fixing the error reloads again", AnyApplied(LoadedBoth));
                     CheckNoLeaks("v3");
                     reloads.Clear();
+                    WriteData("probe_v2");
+                    break;
+
+                case 5:
+                    if (Busy || !reloads.Any(r => r.Applied))
+                        return;
+                    Check("editing a data-only mod reaches the kept character factory", ProbeCharacterName() == "probe_v2");
+                    reloads.Clear();
                     GameLaunchArgs.SetCurrent(startSelection);
                     StartManualReload();
                     break;
 
-                case 5:
+                case 6:
                     if (Busy || ProbeValue() != null || !AnyApplied(UnloadedBoth))
                         return;
                     Check("dropping the probes unloads them and their node", true);
@@ -205,6 +220,19 @@ namespace Mods.HotReloadTest
                 GameLogger.Log("TEST", $"HotReloadTest: leaked: {string.Join(", ", leaked)}", LogLevel.Error);
         }
 
+        private static string ProbeCharacterName() => CharacterTemplateRegistry.Get(ProbeCharacterId)?.Name;
+
+        private void WriteData(string name)
+        {
+            var data = Path.Combine(modsRoot, DataId);
+            Directory.CreateDirectory(Path.Combine(data, "characters"));
+            File.WriteAllText(Path.Combine(data, "manifest.json"),
+                "{ \"id\": \"" + DataId + "\", \"name\": \"Hot reload probe data\", \"version\": \"1.0.0\", \"author\": \"test\", " +
+                "\"depends\": [\"characters_base>=1\"] }");
+            File.WriteAllText(Path.Combine(data, "characters", "probe.json"),
+                "{ \"Kind\": \"character\", \"Items\": [ { \"Id\": \"" + ProbeCharacterId + "\", \"Name\": \"" + name + "\", \"Health\": 1 } ] }");
+        }
+
         private void WriteProbes(string version)
         {
             var app = Path.Combine(modsRoot, AppId);
@@ -229,7 +257,7 @@ namespace Mods.HotReloadTest
 
         private void DeleteProbes()
         {
-            foreach (var id in new[] { LibId, AppId })
+            foreach (var id in new[] { LibId, AppId, DataId })
             {
                 var dir = Path.Combine(modsRoot, id);
                 if (Directory.Exists(dir))
