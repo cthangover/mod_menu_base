@@ -1,0 +1,10 @@
+{
+  "name": "Display Settings Test",
+  "description": "Integration test of the Display tab of the settings menu: window mode, window size centred on the monitor, borderless fullscreen, frame rate cap, V-Sync, the restore of the saved file on start and the reset; the player's settings file is restored at the end. Activated only by --itest=display_settings (with --frontend, windowed).",
+  "sources": [
+    "src/*.cs"
+  ],
+  "depends": [
+    "menu_base>=1"
+  ]
+}

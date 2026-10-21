@@ -9,6 +9,7 @@ using Cthangover.Core.Utils;
 using Godot;
 
 using Cthangover.Mods.Interface.Menu;
+using Cthangover.Mods.Interface.Theming;
 namespace Cthangover.BaseMenu
 {
     /// <summary>
@@ -19,8 +20,12 @@ namespace Cthangover.BaseMenu
     /// immediate effect, then emit LanguageChanged so parent menus can refresh
     /// their translated button text. Sliders become non-editable when their
     /// toggle is off, enforcing the "disabled means off" semantics visually.
-    /// Display changes (window mode, resolution, monitor, V-Sync, scale) are
-    /// applied live via DisplayServer and ProjectSettings.
+    /// Display changes (window mode, monitor, window size, V-Sync, frame rate
+    /// cap) are applied live through <see cref="DisplaySettingsService"/> and saved
+    /// at once, so the next start restores exactly what is on screen; the lists
+    /// come from <see cref="DisplayOptions"/>, shared with the first-run launcher.
+    /// The window size list is rebuilt for the chosen monitor and is disabled in
+    /// the fullscreen modes, which always run at the monitor's resolution.
     /// </summary>
     public partial class SettingsMenu : Control, ISettingsPanel
     {
@@ -30,7 +35,20 @@ namespace Cthangover.BaseMenu
         /// refresh their translated button text.
         /// </summary>
         public event Action LanguageChanged;
-        private TabContainer _tabs;
+        private const string Header = "Window/Column/Header/Row/";
+        private const string Pages = "Window/Column/Body/Pages/";
+        private const string Audio = Pages + "Audio/";
+        private const string Display = Pages + "Display/";
+        private const string Mods = Pages + "Mods/";
+
+        /// <summary>Names of <see cref="LanguageCode.Supported"/>, same order.</summary>
+        private static readonly string[] LanguageKeys = { "settings/lang_ru", "settings/lang_en", "settings/lang_zh" };
+
+        private static readonly string[] TabKeys = { "settings/tab_general", "settings/tab_audio", "settings/tab_display", "settings/tab_mods" };
+
+        private Button[] _tabButtons;
+        private Control[] _pages;
+        private int _tab;
         private CheckButton _soundsToggle;
         private CheckButton _musicToggle;
         private CheckButton _ambientToggle;
@@ -41,11 +59,11 @@ namespace Cthangover.BaseMenu
         private Label _musicVolumeValue;
         private Label _ambientVolumeValue;
         private OptionButton _langSelect;
-        private Button _backBtn;
+        private Button _resetButton;
+        private Label _footerHint;
 
         private VBoxContainer _modListContainer;
         private Label _selectedModName;
-        private Button _resetModSettingsBtn;
         private VBoxContainer _settingsContainer;
         private string _selectedModId;
         private readonly Dictionary<Control, string> _controlKeys = new();
@@ -53,72 +71,105 @@ namespace Cthangover.BaseMenu
         private OptionButton _windowModeSelect;
         private OptionButton _resolutionSelect;
         private OptionButton _monitorSelect;
-        private OptionButton _scaleSelect;
+        private OptionButton _fpsSelect;
         private CheckButton _vsyncToggle;
+        private Label _resHint;
+        private List<Vector2I> _windowSizes = new();
 
         private readonly Dictionary<Label, string> _labelKeys = new();
         private bool _initialized;
 
-        private static readonly Vector2I[] CommonResolutions =
-        {
-            new(1280, 720),
-            new(1366, 768),
-            new(1600, 900),
-            new(1920, 1080),
-            new(2560, 1440),
-            new(3840, 2160),
-        };
-
-        private static readonly int[] ScaleOptions = { 1, 2, 3, 4 };
-
         public override void _Ready()
         {
-            _tabs = GetNode<TabContainer>("Panel/Margin/VBox/Tabs");
+            CthangoverTheme.Apply(this);
+            GetNode<ColorRect>("Backdrop").Color = UiTokens.Backdrop;
+            GetNode<PanelContainer>("Window").AddThemeStyleboxOverride("panel", UiKit.Frame(UiTokens.RadiusLg, UiTokens.Surface0, UiTokens.Line));
+            GetNode<ColorRect>("Window/Column/RuleHeader").Color = UiTokens.Line;
+            GetNode<ColorRect>("Window/Column/RuleFooter").Color = UiTokens.Line;
 
-            _langSelect = GetNode<OptionButton>("Panel/Margin/VBox/Tabs/GeneralMargin/General/LangBox/LangSelect");
+            var title = GetNode<Label>(Header + "Title");
+            title.AddThemeFontSizeOverride("font_size", UiTokens.FontTitle);
+            title.AddThemeColorOverride("font_color", UiTokens.InkBright);
+            RegisterLabel(title, "menu/settings");
 
-            _soundsToggle = GetNode<CheckButton>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/SoundsBox/ToggleRow/SoundsToggle");
-            _soundsVolume = GetNode<HSlider>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/SoundsBox/VolumeRow/SoundsVolume");
-            _soundsVolumeValue = GetNode<Label>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/SoundsBox/VolumeRow/SoundsVolumeValue");
+            var close = GetNode<Button>(Header + "CloseButton");
+            CthangoverTheme.ApplyIcon(close);
+            close.Pressed += OnBackPressed;
 
-            _musicToggle = GetNode<CheckButton>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/MusicBox/ToggleRow2/MusicToggle");
-            _musicVolume = GetNode<HSlider>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/MusicBox/VolumeRow2/MusicVolume");
-            _musicVolumeValue = GetNode<Label>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/MusicBox/VolumeRow2/MusicVolumeValue");
+            _tabButtons = new[]
+            {
+                GetNode<Button>(Header + "Tabs/GeneralTab"),
+                GetNode<Button>(Header + "Tabs/AudioTab"),
+                GetNode<Button>(Header + "Tabs/DisplayTab"),
+                GetNode<Button>(Header + "Tabs/ModsTab"),
+            };
+            _pages = new[]
+            {
+                GetNode<Control>(Pages + "General"),
+                GetNode<Control>(Pages + "Audio"),
+                GetNode<Control>(Pages + "Display"),
+                GetNode<Control>(Pages + "Mods"),
+            };
+            var tabGroup = new ButtonGroup();
+            foreach (var tab in _tabButtons)
+            {
+                CthangoverTheme.ApplyTab(tab);
+                tab.ButtonGroup = tabGroup;
+            }
+            tabGroup.Pressed += OnTabPressed;
 
-            _ambientToggle = GetNode<CheckButton>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/AmbientBox/ToggleRow3/AmbientToggle");
-            _ambientVolume = GetNode<HSlider>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/AmbientBox/VolumeRow3/AmbientVolume");
-            _ambientVolumeValue = GetNode<Label>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/AmbientBox/VolumeRow3/AmbientVolumeValue");
+            _langSelect = GetNode<OptionButton>(Pages + "General/LangRow/LangSelect");
 
-            _windowModeSelect = GetNode<OptionButton>("Panel/Margin/VBox/Tabs/DisplayMargin/Display/ModeBox/ModeSelect");
-            _resolutionSelect = GetNode<OptionButton>("Panel/Margin/VBox/Tabs/DisplayMargin/Display/ResBox/ResSelect");
-            _monitorSelect = GetNode<OptionButton>("Panel/Margin/VBox/Tabs/DisplayMargin/Display/MonitorBox/MonitorSelect");
-            _scaleSelect = GetNode<OptionButton>("Panel/Margin/VBox/Tabs/DisplayMargin/Display/ScaleBox/ScaleSelect");
-            _vsyncToggle = GetNode<CheckButton>("Panel/Margin/VBox/Tabs/DisplayMargin/Display/VSyncRow/VSyncToggle");
+            _soundsToggle = GetNode<CheckButton>(Audio + "SoundsRow/SoundsToggle");
+            _soundsVolume = GetNode<HSlider>(Audio + "SoundsRow/SoundsVolume");
+            _soundsVolumeValue = GetNode<Label>(Audio + "SoundsRow/SoundsValue");
+            _musicToggle = GetNode<CheckButton>(Audio + "MusicRow/MusicToggle");
+            _musicVolume = GetNode<HSlider>(Audio + "MusicRow/MusicVolume");
+            _musicVolumeValue = GetNode<Label>(Audio + "MusicRow/MusicValue");
+            _ambientToggle = GetNode<CheckButton>(Audio + "AmbientRow/AmbientToggle");
+            _ambientVolume = GetNode<HSlider>(Audio + "AmbientRow/AmbientVolume");
+            _ambientVolumeValue = GetNode<Label>(Audio + "AmbientRow/AmbientValue");
+            foreach (var value in new[] { _soundsVolumeValue, _musicVolumeValue, _ambientVolumeValue })
+                value.AddThemeColorOverride("font_color", UiTokens.AccentBright);
 
-            _backBtn = GetNode<Button>("Panel/Margin/VBox/BackBtn");
-            CthangoverTheme.ApplyIcon(_backBtn);
+            _windowModeSelect = GetNode<OptionButton>(Display + "ModeRow/ModeSelect");
+            _resolutionSelect = GetNode<OptionButton>(Display + "ResRow/ResSelect");
+            _monitorSelect = GetNode<OptionButton>(Display + "MonitorRow/MonitorSelect");
+            _fpsSelect = GetNode<OptionButton>(Display + "FpsRow/FpsSelect");
+            _vsyncToggle = GetNode<CheckButton>(Display + "VSyncRow/VSyncToggle");
+            _resHint = GetNode<Label>(Display + "ResHint");
+            StyleHint(_resHint);
 
-            _modListContainer = GetNode<VBoxContainer>("Panel/Margin/VBox/Tabs/ModSettingsMargin/ModSettings/LeftPanel/ModScroll/ModList");
-            _selectedModName = GetNode<Label>("Panel/Margin/VBox/Tabs/ModSettingsMargin/ModSettings/RightPanel/TopBar/SelectedModName");
-            _resetModSettingsBtn = GetNode<Button>("Panel/Margin/VBox/Tabs/ModSettingsMargin/ModSettings/RightPanel/TopBar/ResetBtn");
-            CthangoverTheme.ApplyDanger(_resetModSettingsBtn);
-            _settingsContainer = GetNode<VBoxContainer>("Panel/Margin/VBox/Tabs/ModSettingsMargin/ModSettings/RightPanel/SettingsScroll/SettingsContainer");
+            GetNode<PanelContainer>(Mods + "ModListPanel").AddThemeStyleboxOverride("panel", ListPanelStyle());
+            _modListContainer = GetNode<VBoxContainer>(Mods + "ModListPanel/Column/ModScroll/ModList");
+            _selectedModName = GetNode<Label>(Mods + "Detail/SelectedModName");
+            _selectedModName.AddThemeFontSizeOverride("font_size", UiTokens.FontH3);
+            _selectedModName.AddThemeColorOverride("font_color", UiTokens.InkBright);
+            _settingsContainer = GetNode<VBoxContainer>(Mods + "Detail/SettingsScroll/SettingsContainer");
 
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Title"), "menu/settings");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/GeneralMargin/General/LangBox/LangLabel"), "settings/language");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/SoundsBox/ToggleRow/SoundsLabel"), "settings/sounds");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/SoundsBox/VolumeRow/SoundsVolumeLabel"), "settings/volume");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/MusicBox/ToggleRow2/MusicLabel"), "settings/music");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/MusicBox/VolumeRow2/MusicVolumeLabel"), "settings/volume");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/AmbientBox/ToggleRow3/AmbientLabel"), "settings/ambient");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/AudioMargin/Audio/AmbientBox/VolumeRow3/AmbientVolumeLabel"), "settings/volume");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/DisplayMargin/Display/ModeBox/ModeLabel"), "settings/window_mode");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/DisplayMargin/Display/ResBox/ResLabel"), "settings/resolution");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/DisplayMargin/Display/MonitorBox/MonitorLabel"), "settings/monitor");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/DisplayMargin/Display/ScaleBox/ScaleLabel"), "settings/scale");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/DisplayMargin/Display/VSyncRow/VSyncLabel"), "settings/vsync");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/ModSettingsMargin/ModSettings/LeftPanel/ModsTitle"), "settings/mod_list_title");
-            RegisterLabel(GetNode<Label>("Panel/Margin/VBox/Tabs/ModSettingsMargin/ModSettings/RightPanel/SettingsScroll/SettingsContainer/Placeholder"), "settings/mods_no_settings");
+            _resetButton = GetNode<Button>("Window/Column/Footer/Row/ResetButton");
+            CthangoverTheme.ApplyDanger(_resetButton);
+            _resetButton.Pressed += OnResetPressed;
+            _footerHint = GetNode<Label>("Window/Column/Footer/Row/Hint");
+            StyleHint(_footerHint);
+            RegisterLabel(_footerHint, "settings/saved_at_once");
+
+            RegisterSection(Pages + "General/LangSection", "settings/language");
+            RegisterLabel(GetNode<Label>(Pages + "General/LangRow/LangLabel"), "settings/interface_language");
+            RegisterSection(Audio + "VolumeSection", "settings/volume");
+            RegisterLabel(GetNode<Label>(Audio + "SoundsRow/SoundsLabel"), "settings/sounds");
+            RegisterLabel(GetNode<Label>(Audio + "MusicRow/MusicLabel"), "settings/music");
+            RegisterLabel(GetNode<Label>(Audio + "AmbientRow/AmbientLabel"), "settings/ambient");
+            RegisterSection(Display + "WindowSection", "settings/section_window");
+            RegisterLabel(GetNode<Label>(Display + "ModeRow/ModeLabel"), "settings/window_mode");
+            RegisterLabel(GetNode<Label>(Display + "ResRow/ResLabel"), "settings/resolution");
+            RegisterLabel(GetNode<Label>(Display + "MonitorRow/MonitorLabel"), "settings/monitor");
+            RegisterLabel(_resHint, "settings/resolution_fullscreen_hint");
+            RegisterSection(Display + "RenderSection", "settings/section_performance");
+            RegisterLabel(GetNode<Label>(Display + "VSyncRow/VSyncLabel"), "settings/vsync");
+            RegisterLabel(GetNode<Label>(Display + "FpsRow/FpsLabel"), "settings/max_fps");
+            RegisterSection(Mods + "ModListPanel/Column/ModsTitle", "settings/mod_list_title");
+            RegisterLabel(GetNode<Label>(Mods + "Detail/SettingsScroll/SettingsContainer/Placeholder"), "settings/mods_no_settings");
 
             _soundsToggle.Toggled += OnSoundsToggled;
             _musicToggle.Toggled += OnMusicToggled;
@@ -127,25 +178,78 @@ namespace Cthangover.BaseMenu
             _musicVolume.ValueChanged += OnMusicVolumeChanged;
             _ambientVolume.ValueChanged += OnAmbientVolumeChanged;
             _langSelect.ItemSelected += OnLanguageSelected;
-            _backBtn.Pressed += OnBackPressed;
-            _backBtn.Text = TranslationServer.Translate("settings/back");
 
-            _windowModeSelect.ItemSelected += OnDisplaySettingChanged;
-            _resolutionSelect.ItemSelected += OnDisplaySettingChanged;
-            _monitorSelect.ItemSelected += OnDisplaySettingChanged;
-            _scaleSelect.ItemSelected += OnDisplaySettingChanged;
-            _vsyncToggle.Toggled += OnDisplayToggleChanged;
-            _resetModSettingsBtn.Pressed += OnResetModSettings;
+            _windowModeSelect.ItemSelected += OnWindowSettingChanged;
+            _resolutionSelect.ItemSelected += OnWindowSettingChanged;
+            _monitorSelect.ItemSelected += OnMonitorSelected;
+            _fpsSelect.ItemSelected += OnRenderingSettingChanged;
+            _vsyncToggle.Toggled += OnVsyncToggled;
 
             LoadSettingsToUI();
             BuildModList();
+            ShowTab(0);
             _initialized = true;
+        }
+
+        /// <summary>Index of the visible tab: 0 general, 1 sound, 2 display, 3 mod settings.</summary>
+        public int CurrentTab => _tab;
+
+        /// <summary>Shows tab <paramref name="index"/>: its page, the gold tab button and the footer reset that belongs to it.</summary>
+        public void ShowTab(int index)
+        {
+            _tab = Mathf.Clamp(index, 0, _pages.Length - 1);
+            for (var i = 0; i < _pages.Length; i++)
+            {
+                _pages[i].Visible = i == _tab;
+                _tabButtons[i].SetPressedNoSignal(i == _tab);
+            }
+            UpdateResetButton();
+        }
+
+        private void OnTabPressed(BaseButton button) => ShowTab(Array.IndexOf(_tabButtons, button));
+
+        /// <summary>The footer reset acts on the visible tab: display settings, or the selected mod's settings.</summary>
+        private void UpdateResetButton()
+        {
+            _resetButton.Visible = _tab == 2 || (_tab == 3 && !string.IsNullOrEmpty(_selectedModId));
+            _resetButton.Text = TranslationServer.Translate(_tab == 2 ? "settings/display_reset" : "settings/mods_reset");
+        }
+
+        private void OnResetPressed()
+        {
+            if (_tab == 2)
+                OnResetDisplay();
+            else if (_tab == 3)
+                OnResetModSettings();
         }
 
         private void RegisterLabel(Label label, string key)
         {
             if (label != null)
                 _labelKeys[label] = key;
+        }
+
+        /// <summary>Section caption: small muted caps, as section titles everywhere in the kit.</summary>
+        private void RegisterSection(string path, string key)
+        {
+            var label = GetNode<Label>(path);
+            label.AddThemeFontSizeOverride("font_size", UiTokens.FontSmall);
+            label.AddThemeColorOverride("font_color", UiTokens.Muted);
+            RegisterLabel(label, key);
+        }
+
+        private static void StyleHint(Label label)
+        {
+            label.AddThemeFontSizeOverride("font_size", UiTokens.FontBodySmall);
+            label.AddThemeColorOverride("font_color", UiTokens.Faint);
+        }
+
+        private static StyleBoxFlat ListPanelStyle()
+        {
+            var style = UiKit.Frame(UiTokens.RadiusMd, UiTokens.Surface2, UiTokens.Line);
+            style.ContentMarginLeft = style.ContentMarginRight = UiTokens.Space5;
+            style.ContentMarginTop = style.ContentMarginBottom = UiTokens.Space5;
+            return style;
         }
 
         private void RefreshUIText()
@@ -155,12 +259,10 @@ namespace Cthangover.BaseMenu
                 if (IsInstanceValid(kv.Key))
                     kv.Key.Text = TranslationServer.Translate(kv.Value);
             }
-            _backBtn.Text = TranslationServer.Translate("settings/back");
-            _tabs.SetTabTitle(0, TranslationServer.Translate("settings/tab_general"));
-            _tabs.SetTabTitle(1, TranslationServer.Translate("settings/tab_audio"));
-            _tabs.SetTabTitle(2, TranslationServer.Translate("settings/tab_display"));
-            _tabs.SetTabTitle(3, TranslationServer.Translate("settings/tab_mods"));
-            _resetModSettingsBtn.Text = TranslationServer.Translate("settings/mods_reset");
+            for (var i = 0; i < _tabButtons.Length; i++)
+                _tabButtons[i].Text = TranslationServer.Translate(TabKeys[i]);
+            GetNode<Button>(Header + "CloseButton").TooltipText = TranslationServer.Translate("settings/back");
+            UpdateResetButton();
             PopulateLangOptions();
             PopulateDisplayOptions();
         }
@@ -180,96 +282,86 @@ namespace Cthangover.BaseMenu
             _musicVolumeValue.Text = $"{s.MusicsVolume}%";
             _ambientVolumeValue.Text = $"{s.AmbientVolume}%";
 
-            _vsyncToggle.ButtonPressed = s.VsyncEnabled;
-            _windowModeSelect.Selected = WindowModeToIndex(s.WindowMode);
-
             UpdateSlidersEditable();
             PopulateLangOptions();
-            PopulateDisplayOptions();
             RefreshUIText();
+            LoadDisplayToUI(s);
+        }
 
-            SelectCurrentResolution(s);
-            SelectCurrentMonitor(s);
-            SelectCurrentScale(s);
+        /// <summary>Shows the saved display settings; the window size list is built for the saved monitor.</summary>
+        private void LoadDisplayToUI(SettingsData s)
+        {
+            _windowModeSelect.Selected = DisplayOptions.WindowModeIndex(s.WindowMode);
+            _monitorSelect.Selected = DisplaySettingsService.ClampScreen(s.CurrentScreen);
+            FillWindowSizes(new Vector2I(s.ResolutionWidth, s.ResolutionHeight));
+            _vsyncToggle.ButtonPressed = s.VsyncEnabled;
+            _fpsSelect.Selected = DisplayOptions.FrameRateIndex(s.MaxFps);
+            UpdateWindowSizeEditable();
         }
 
         private void PopulateLangOptions()
         {
             _langSelect.Clear();
-            _langSelect.AddItem(TranslationServer.Translate("settings/lang_ru"));
-            _langSelect.AddItem(TranslationServer.Translate("settings/lang_en"));
-            _langSelect.AddItem(TranslationServer.Translate("settings/lang_zh"));
+            foreach (var key in LanguageKeys)
+                _langSelect.AddItem(TranslationServer.Translate(key));
 
             var s = GameData.Instance?.Settings;
             if (s == null) return;
-            _langSelect.Selected = s.Language switch { "en" => 1, "zh" => 2, _ => 0 };
+            _langSelect.Selected = Mathf.Max(0, System.Array.IndexOf(LanguageCode.Supported, LanguageCode.Normalize(s.Language) ?? LanguageCode.Supported[0]));
         }
 
+        /// <summary>Re-fills the translated display lists, keeping the selected items.</summary>
         private void PopulateDisplayOptions()
         {
-            var previousWindow = _windowModeSelect.Selected;
-            var previousRes = _resolutionSelect.Selected;
-            var previousMon = _monitorSelect.Selected;
-            var previousScale = _scaleSelect.Selected;
+            var mode = _windowModeSelect.Selected;
+            var monitor = _monitorSelect.Selected;
+            var fps = _fpsSelect.Selected;
 
             _windowModeSelect.Clear();
-            _windowModeSelect.AddItem(TranslationServer.Translate("settings/window_mode_windowed"));
-            _windowModeSelect.AddItem(TranslationServer.Translate("settings/window_mode_borderless"));
-            _windowModeSelect.AddItem(TranslationServer.Translate("settings/window_mode_fullscreen"));
-
-            _resolutionSelect.Clear();
-            foreach (var r in CommonResolutions)
-                _resolutionSelect.AddItem($"{r.X}×{r.Y}");
+            foreach (var key in DisplayOptions.WindowModeKeys)
+                _windowModeSelect.AddItem(TranslationServer.Translate(key));
 
             _monitorSelect.Clear();
-            var count = DisplayServer.GetScreenCount();
-            if (count <= 0) count = 1;
-            for (var i = 0; i < count; i++)
+            for (var i = 0; i < DisplaySettingsService.ScreenCount; i++)
             {
                 var size = DisplayServer.ScreenGetSize(i);
-                var label = string.Format(TranslationServer.Translate("settings/monitor_screen"), i + 1, size.X, size.Y);
-                _monitorSelect.AddItem(label);
+                var key = i == DisplayServer.GetPrimaryScreen() ? "settings/monitor_screen_primary" : "settings/monitor_screen";
+                _monitorSelect.AddItem(string.Format(TranslationServer.Translate(key), i + 1, size.X, size.Y));
             }
 
-            _scaleSelect.Clear();
-            foreach (var sc in ScaleOptions)
-                _scaleSelect.AddItem(TranslationServer.Translate($"settings/scale_{sc}x"));
+            _fpsSelect.Clear();
+            foreach (var rate in DisplayOptions.FrameRates)
+                _fpsSelect.AddItem(rate == 0 ? TranslationServer.Translate("settings/max_fps_unlimited") : string.Format(TranslationServer.Translate("settings/max_fps_value"), rate));
 
-            _windowModeSelect.Selected = Mathf.Clamp(previousWindow, 0, 2);
-            _resolutionSelect.Selected = Mathf.Clamp(previousRes, 0, CommonResolutions.Length - 1);
-            _monitorSelect.Selected = Mathf.Clamp(previousMon, 0, count - 1);
-            _scaleSelect.Selected = Mathf.Clamp(previousScale, 0, ScaleOptions.Length - 1);
+            _windowModeSelect.Selected = Mathf.Clamp(mode, 0, DisplayOptions.WindowModes.Length - 1);
+            _monitorSelect.Selected = Mathf.Clamp(monitor, 0, DisplaySettingsService.ScreenCount - 1);
+            _fpsSelect.Selected = Mathf.Clamp(fps, 0, DisplayOptions.FrameRates.Length - 1);
         }
 
-        private void SelectCurrentResolution(SettingsData s)
+        /// <summary>Fills the window sizes of the chosen monitor, keeping <paramref name="wanted"/> (or the nearest smaller size) selected.</summary>
+        private void FillWindowSizes(Vector2I wanted)
         {
-            for (var i = 0; i < CommonResolutions.Length; i++)
-            {
-                if (CommonResolutions[i].X == s.ResolutionWidth && CommonResolutions[i].Y == s.ResolutionHeight)
-                {
-                    _resolutionSelect.Selected = i;
-                    return;
-                }
-            }
+            _windowSizes = DisplayOptions.WindowSizes(DisplayServer.ScreenGetSize(Mathf.Max(0, _monitorSelect.Selected)), wanted);
+            _resolutionSelect.Clear();
+            foreach (var size in _windowSizes)
+                _resolutionSelect.AddItem($"{size.X}×{size.Y}");
+            _resolutionSelect.Selected = DisplayOptions.WindowSizeIndex(_windowSizes, wanted);
         }
 
-        private void SelectCurrentMonitor(SettingsData s)
+        private Vector2I SelectedWindowSize()
         {
-            var count = DisplayServer.GetScreenCount();
-            if (s.CurrentScreen >= 0 && s.CurrentScreen < count)
-                _monitorSelect.Selected = s.CurrentScreen;
+            var index = _resolutionSelect.Selected;
+            return index >= 0 && index < _windowSizes.Count ? _windowSizes[index] : DisplayServer.WindowGetSize();
         }
 
-        private void SelectCurrentScale(SettingsData s)
+        private DisplayServer.WindowMode SelectedWindowMode() =>
+            DisplayOptions.WindowModes[Mathf.Clamp(_windowModeSelect.Selected, 0, DisplayOptions.WindowModes.Length - 1)];
+
+        private void UpdateWindowSizeEditable()
         {
-            for (var i = 0; i < ScaleOptions.Length; i++)
-            {
-                if (ScaleOptions[i] == s.Scale)
-                {
-                    _scaleSelect.Selected = i;
-                    return;
-                }
-            }
+            var windowed = DisplayOptions.UsesWindowSize((int)SelectedWindowMode());
+            _resolutionSelect.Disabled = !windowed;
+            _resHint.Visible = !windowed;
         }
 
         private void ApplyAndSave()
@@ -287,40 +379,32 @@ namespace Cthangover.BaseMenu
             s.Save();
         }
 
-        private void ApplyDisplayAndSave()
+        /// <summary>Saves the window part (mode, monitor, size) and moves the window there.</summary>
+        private void ApplyWindowAndSave()
         {
             if (!_initialized) return;
             var s = GameData.Instance?.Settings;
             if (s == null) return;
 
-            var windowMode = IndexToWindowMode(_windowModeSelect.Selected);
-            var resIdx = Mathf.Clamp(_resolutionSelect.Selected, 0, CommonResolutions.Length - 1);
-            var resolution = CommonResolutions[resIdx];
-            var monitorIdx = _monitorSelect.Selected;
-            var scaleIdx = Mathf.Clamp(_scaleSelect.Selected, 0, ScaleOptions.Length - 1);
-            var scale = ScaleOptions[scaleIdx];
-            var vsync = _vsyncToggle.ButtonPressed;
+            var size = SelectedWindowSize();
+            s.WindowMode = (int)SelectedWindowMode();
+            s.CurrentScreen = Mathf.Max(0, _monitorSelect.Selected);
+            s.ResolutionWidth = size.X;
+            s.ResolutionHeight = size.Y;
+            DisplaySettingsService.ApplyWindow(s);
+            s.Save();
+        }
 
-            if (monitorIdx >= 0 && monitorIdx < DisplayServer.GetScreenCount())
-                DisplayServer.WindowSetCurrentScreen(monitorIdx);
+        /// <summary>Saves V-Sync and the frame rate cap and applies them.</summary>
+        private void ApplyRenderingAndSave()
+        {
+            if (!_initialized) return;
+            var s = GameData.Instance?.Settings;
+            if (s == null) return;
 
-            DisplayServer.WindowSetMode(windowMode);
-
-            if (windowMode == DisplayServer.WindowMode.Windowed)
-                DisplayServer.WindowSetSize(resolution);
-
-            DisplayServer.WindowSetVsyncMode(vsync
-                ? DisplayServer.VSyncMode.Enabled
-                : DisplayServer.VSyncMode.Disabled);
-
-            ProjectSettings.SetSetting("display/window/stretch/scale", (float)scale);
-
-            s.WindowMode = (int)windowMode;
-            s.ResolutionWidth = resolution.X;
-            s.ResolutionHeight = resolution.Y;
-            s.CurrentScreen = monitorIdx;
-            s.VsyncEnabled = vsync;
-            s.Scale = scale;
+            s.VsyncEnabled = _vsyncToggle.ButtonPressed;
+            s.MaxFps = DisplayOptions.FrameRates[Mathf.Clamp(_fpsSelect.Selected, 0, DisplayOptions.FrameRates.Length - 1)];
+            DisplaySettingsService.ApplyRendering(s);
             s.Save();
         }
 
@@ -332,8 +416,41 @@ namespace Cthangover.BaseMenu
         private void OnMusicVolumeChanged(double v) { _musicVolumeValue.Text = $"{(int)v}%"; ApplyAndSave(); }
         private void OnAmbientVolumeChanged(double v) { _ambientVolumeValue.Text = $"{(int)v}%"; ApplyAndSave(); }
 
-        private void OnDisplaySettingChanged(long idx) => ApplyDisplayAndSave();
-        private void OnDisplayToggleChanged(bool on) => ApplyDisplayAndSave();
+        private void OnWindowSettingChanged(long idx)
+        {
+            UpdateWindowSizeEditable();
+            ApplyWindowAndSave();
+        }
+
+        private void OnMonitorSelected(long idx)
+        {
+            FillWindowSizes(SelectedWindowSize());
+            ApplyWindowAndSave();
+        }
+
+        private void OnRenderingSettingChanged(long idx) => ApplyRenderingAndSave();
+        private void OnVsyncToggled(bool on) => ApplyRenderingAndSave();
+
+        /// <summary>Returns the display settings to the game defaults (game_config.json), applies and saves them.</summary>
+        private void OnResetDisplay()
+        {
+            var s = GameData.Instance?.Settings;
+            if (s == null) return;
+
+            var defaults = new SettingsData();
+            s.WindowMode = defaults.WindowMode;
+            s.CurrentScreen = defaults.CurrentScreen;
+            s.ResolutionWidth = defaults.ResolutionWidth;
+            s.ResolutionHeight = defaults.ResolutionHeight;
+            s.VsyncEnabled = defaults.VsyncEnabled;
+            s.MaxFps = defaults.MaxFps;
+            DisplaySettingsService.Apply(s);
+            s.Save();
+
+            _initialized = false;
+            LoadDisplayToUI(s);
+            _initialized = true;
+        }
 
         private void OnLanguageSelected(long idx)
         {
@@ -341,8 +458,8 @@ namespace Cthangover.BaseMenu
             var s = GameData.Instance?.Settings;
             if (s == null) return;
 
-            var lang = idx switch { 1 => "en", 2 => "zh", _ => "ru-ru" };
-            if (s.Language == lang) return;
+            var lang = LanguageCode.Supported[Mathf.Clamp((int)idx, 0, LanguageCode.Supported.Length - 1)];
+            if (LanguageCode.Normalize(s.Language) == lang) return;
 
             s.Language = lang;
             s.Save();
@@ -352,7 +469,11 @@ namespace Cthangover.BaseMenu
         }
 
         /// <inheritdoc cref="IMenuPanel" />
-        public void Open() => Visible = true;
+        public void Open()
+        {
+            Visible = true;
+            ShowTab(_tab);
+        }
 
         private void OnBackPressed() => Visible = false;
 
@@ -361,26 +482,6 @@ namespace Cthangover.BaseMenu
             _soundsVolume.Editable = _soundsToggle.ButtonPressed;
             _musicVolume.Editable = _musicToggle.ButtonPressed;
             _ambientVolume.Editable = _ambientToggle.ButtonPressed;
-        }
-
-        private static int WindowModeToIndex(int mode)
-        {
-            return mode switch
-            {
-                3 => 1,
-                4 => 2,
-                _ => 0,
-            };
-        }
-
-        private static DisplayServer.WindowMode IndexToWindowMode(int index)
-        {
-            return index switch
-            {
-                1 => DisplayServer.WindowMode.Fullscreen,
-                2 => DisplayServer.WindowMode.ExclusiveFullscreen,
-                _ => DisplayServer.WindowMode.Windowed,
-            };
         }
 
         private void BuildModList()
@@ -393,19 +494,25 @@ namespace Cthangover.BaseMenu
             if (modsWithSettings.Count == 0)
                 return;
 
+            var group = new ButtonGroup();
             foreach (var modId in modsWithSettings)
             {
                 var btn = new Button
                 {
                     Text = ModSettingsRegistry.GetDisplayTitle(modId),
                     SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+                    Alignment = HorizontalAlignment.Left,
+                    ToggleMode = true,
+                    ButtonGroup = group,
+                    FocusMode = FocusModeEnum.None,
                 };
+                CthangoverTheme.ApplyTab(btn);
                 btn.Pressed += () => OnModSelected(modId);
                 _modListContainer.AddChild(btn);
             }
 
-            var firstMod = modsWithSettings[0];
-            OnModSelected(firstMod);
+            ((Button)_modListContainer.GetChild(0)).SetPressedNoSignal(true);
+            OnModSelected(modsWithSettings[0]);
         }
 
         private void OnModSelected(string modId)
@@ -413,6 +520,7 @@ namespace Cthangover.BaseMenu
             _selectedModId = modId;
             _selectedModName.Text = ModSettingsRegistry.GetDisplayTitle(modId);
             BuildModSettingsPanel(modId);
+            UpdateResetButton();
         }
 
         private void BuildModSettingsPanel(string modId)
@@ -450,7 +558,7 @@ namespace Cthangover.BaseMenu
                 var label = new Label
                 {
                     Text = TranslationServer.Translate(def.Name),
-                    CustomMinimumSize = new Vector2(180, 0),
+                    CustomMinimumSize = new Vector2(260, 0),
                     VerticalAlignment = VerticalAlignment.Center,
                 };
                 row.AddChild(label);

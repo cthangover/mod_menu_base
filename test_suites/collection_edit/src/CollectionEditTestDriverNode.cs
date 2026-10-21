@@ -23,6 +23,8 @@ namespace Mods.CollectionEditTest
     /// <item>The collection gets the developer toolset (<c>dev_tools</c>: editors,
     /// the scenario studio, …), saved the way the collection editor saves it (a
     /// user package with the same id): the running game is now outdated.</item>
+    /// <item>The pause menu's "Main menu" button leaves the game like a player
+    /// does, and the pause menu does not stay above the title screen.</item>
     /// <item>Menu → Play → New game of the same game switches the mod set in
     /// place: the editors and the studio are loaded, the studio's button is on
     /// the game's toolbar and the game matches its collection again.</item>
@@ -38,6 +40,7 @@ namespace Mods.CollectionEditTest
         private const string AddedToolset = "dev_tools";
         private const string AddedMod = "editor_tools";
         private const string StudioMod = "scenario_studio";
+        private const string GameMenuId = "game_menu";
         private const float TimeoutSeconds = 240f;
 
         private readonly List<string> failures = new();
@@ -115,21 +118,42 @@ namespace Mods.CollectionEditTest
 
                     AddEditorsToCollection();
                     Check("the edited collection makes the running game outdated", GameCatalog.IsActiveOutdated());
-                    GetTree().Root.GetNode<GodotSceneService>("GodotSceneService").SwitchToMenu();
+                    AppServices.Current.Ui.ToggleEntry(GameMenuId);
                     break;
 
                 case 1:
+                {
+                    var open = UiHost.Instance.TryGetInstance(GameMenuId, out var menu) && menu.Visible;
+                    Check("the pause menu is open", open);
+                    if (menu?.FindChild("MainMenuBtn", true, false) is not Button mainMenu)
+                    {
+                        failures.Add("the pause menu has no Main menu button");
+                        Finish();
+                        return;
+                    }
+                    mainMenu.EmitSignal(BaseButton.SignalName.Pressed);
+                    break;
+                }
+
+                case 2:
+                    if (Busy || GetTree().CurrentScene is not Cthangover.BaseMenu.MainMenu)
+                        return;
+                    Check("the pause menu is closed on the title screen",
+                        !UiHost.Instance.TryGetInstance(GameMenuId, out var left) || !left.IsVisibleInTree());
+                    break;
+
+                case 3:
                     if (Busy || !PressMenuPlay())
                         return;
                     enteredScenes.Clear();
                     break;
 
-                case 2:
+                case 4:
                     if (!StartFromPicker())
                         return;
                     break;
 
-                case 3:
+                case 5:
                 {
                     if (Busy || ActiveGame.Id != GameId || enteredScenes.Count == 0)
                         return;

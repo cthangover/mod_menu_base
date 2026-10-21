@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Cthangover.Core.Scenes;
 using Cthangover.Core.Settings;
+using Cthangover.Core.UI;
 using Cthangover.Core.UI.Menu;
 using Cthangover.Core.UI.Theming;
 using Cthangover.Core.UI.Tool;
@@ -54,6 +55,9 @@ namespace Cthangover.BaseMenu
         private void BuildUi()
         {
             CthangoverTheme.Apply(this);
+            // Panels of the session (pause menu, inventory, studio...) live on the
+            // persistent UI layer above every scene; none of them belongs on the title screen.
+            UiHost.Instance?.HideAll();
 
             _settingsMenu = new ModScenePrefab("scenes/menu/settings_menu.tscn").Instantiate<SettingsMenu>();
             _settingsMenu.Name = "SettingsPanel";

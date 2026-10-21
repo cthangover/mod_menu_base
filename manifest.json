@@ -14,6 +14,7 @@
     {"id": "save_dormancy", "activate": ["--itest=save_dormancy"]},
     {"id": "new_game", "activate": ["--itest=new_game"]},
     {"id": "hot_reload", "activate": ["--itest=hot_reload"]},
-    {"id": "collection_edit", "activate": ["--itest=collection_edit"]}
+    {"id": "collection_edit", "activate": ["--itest=collection_edit"]},
+    {"id": "display_settings", "activate": ["--itest=display_settings"]}
   ]
 }
