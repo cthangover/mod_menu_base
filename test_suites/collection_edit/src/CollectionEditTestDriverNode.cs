@@ -9,6 +9,7 @@ using Cthangover.Core.Games;
 using Cthangover.Core.Mods;
 using Cthangover.Core.Mods.HotReload;
 using Cthangover.Core.Scenes;
+using Cthangover.Core.UI;
 using Cthangover.Core.Utils;
 using Godot;
 
@@ -136,7 +137,7 @@ namespace Mods.CollectionEditTest
                     Check("New game after the edit switched the mod set", reload?.Applied == true && reload.Plan?.Load.Contains(AddedMod) == true);
                     Check($"'{AddedMod}' is loaded after the edit", EditorsLoaded);
                     Check($"'{StudioMod}' is loaded after the edit", ModRegistry.Instance.Mods.ContainsKey(StudioMod));
-                    Check("the studio's button is on the game's toolbar", HasToolbarButton(TranslationServer.Translate("studio/title").ToString()));
+                    Check("the studio's button is on the game's toolbar", HasToolbarButton(StudioButtonTooltip()));
                     Check("the game matches its edited collection", !GameCatalog.IsActiveOutdated());
                     Check($"entered a scene of '{GameId}' ('{enteredScenes[0]}')", true);
                     Finish();
@@ -191,6 +192,17 @@ namespace Mods.CollectionEditTest
                 else if (File.Exists(aside))
                     File.Move(aside, from);
             }
+        }
+
+        /// <summary>
+        /// Tooltip of the studio's toolbar button, read from the panel entry the studio
+        /// registered: the suite does not depend on the studio (it is added by the edit),
+        /// so its locale key must not be hard-coded here.
+        /// </summary>
+        private static string StudioButtonTooltip()
+        {
+            var locale = UiRegistry.PanelEntries.FirstOrDefault(e => e.ModId == StudioMod && e.Button != null)?.Button.Locale;
+            return locale == null ? null : TranslationServer.Translate(locale).ToString();
         }
 
         private bool HasToolbarButton(string tooltip)
