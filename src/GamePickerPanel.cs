@@ -17,11 +17,17 @@ namespace Cthangover.BaseMenu
     /// readiness (what is missing and what can be installed), saves and the
     /// last play date — with New game / Continue / Saves / Install / Configure.
     /// Data comes from <see cref="GameCatalog"/> against all installed mods, so
-    /// it works from the front-end where only the menu is loaded.
+    /// it works from the front-end where only the menu is loaded. The window is
+    /// the menu shell (<see cref="MenuWindowShell"/>, scene <c>game_picker.tscn</c>);
+    /// its footer says whether the games' mods are still compiled in the
+    /// background (<see cref="GameSession.IsWarmingUp"/>) or a start is quick.
     /// </summary>
     public partial class GamePickerPanel : Control
     {
+        private const float HintRefreshSeconds = 0.5f;
+
         private VBoxContainer _list;
+        private Label _hint;
         private readonly HashSet<string> _sessionInstalled = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>Raised when the player opens a game's saves; the menu shows its save browser.</summary>
@@ -31,58 +37,29 @@ namespace Cthangover.BaseMenu
 
         public override void _Ready()
         {
-            SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-            MouseFilter = MouseFilterEnum.Stop;
+            MenuWindowShell.Style(this, Close);
+            GetNode<Label>(MenuWindowShell.Header + "Title").Text = TranslationServer.Translate("menu/play/title");
+            _list = GetNode<VBoxContainer>(MenuWindowShell.Body + "Scroll/List");
+            _hint = GetNode<Label>(MenuWindowShell.Footer + "Hint");
 
-            var backdrop = new ColorRect { Color = new Color(0, 0, 0, 0.65f) };
-            backdrop.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-            AddChild(backdrop);
-
-            var panel = new PanelContainer();
-            panel.AddThemeStyleboxOverride("panel", UiKit.Frame(UiTokens.RadiusLg, UiTokens.Surface1, UiTokens.Line));
-            panel.AnchorLeft = panel.AnchorRight = panel.AnchorTop = panel.AnchorBottom = 0.5f;
-            panel.OffsetLeft = -460;
-            panel.OffsetRight = 460;
-            panel.OffsetTop = -310;
-            panel.OffsetBottom = 310;
-            panel.GrowHorizontal = GrowDirection.Both;
-            panel.GrowVertical = GrowDirection.Both;
-            AddChild(panel);
-
-            var margin = new MarginContainer();
-            foreach (var side in new[] { "left", "right", "top", "bottom" })
-                margin.AddThemeConstantOverride($"margin_{side}", UiTokens.Space6);
-            panel.AddChild(margin);
-
-            var column = UiKit.Column(UiTokens.Space4);
-            column.MouseFilter = MouseFilterEnum.Pass;
-            margin.AddChild(column);
-
-            column.AddChild(UiKit.Label(TranslationServer.Translate("menu/play/title"), UiTokens.FontH2, UiTokens.InkBright));
-
-            var scroll = new ScrollContainer
-            {
-                SizeFlagsVertical = SizeFlags.ExpandFill,
-                HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
-            };
-            column.AddChild(scroll);
-
-            _list = UiKit.Column(UiTokens.Space3);
-            _list.MouseFilter = MouseFilterEnum.Pass;
-            _list.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            scroll.AddChild(_list);
-
-            var back = UiKit.Button(TranslationServer.Translate("settings/back"));
-            back.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
-            back.Pressed += Close;
-            column.AddChild(back);
+            // The footer tells whether the games' mods are still compiled in the background.
+            var timer = new Timer { WaitTime = HintRefreshSeconds, Autostart = true };
+            timer.Timeout += RefreshHint;
+            AddChild(timer);
 
             Visible = false;
+        }
+
+        private void RefreshHint()
+        {
+            if (Visible)
+                _hint.Text = TranslationServer.Translate(GameSession.IsWarmingUp ? "menu/play/hint_warming" : "menu/play/hint_ready");
         }
 
         public void Open()
         {
             Visible = true;
+            RefreshHint();
             Rebuild();
         }
 
@@ -115,22 +92,16 @@ namespace Cthangover.BaseMenu
             var newest = saves.OrderByDescending(s => s.SaveTime).FirstOrDefault();
 
             var card = new PanelContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-            card.AddThemeStyleboxOverride("panel", UiKit.Frame(UiTokens.RadiusMd, UiTokens.Surface2,
-                ActiveGame.Id == collection.Id ? UiTokens.Accent : UiTokens.LineCard));
+            var cardStyle = UiKit.Frame(UiTokens.RadiusMd, UiTokens.Surface2, ActiveGame.Id == collection.Id ? UiTokens.AccentLine : UiTokens.LineCard);
+            cardStyle.ContentMarginLeft = cardStyle.ContentMarginRight = UiTokens.Space5;
+            cardStyle.ContentMarginTop = cardStyle.ContentMarginBottom = UiTokens.Space5;
+            card.AddThemeStyleboxOverride("panel", cardStyle);
 
             var row = UiKit.Row(UiTokens.Space4);
             row.MouseFilter = MouseFilterEnum.Pass;
             card.AddChild(row);
 
-            var cover = GameCatalog.LoadCover(collection);
-            row.AddChild(new TextureRect
-            {
-                Texture = cover,
-                CustomMinimumSize = new Vector2(176, 99),
-                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-                StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-                SizeFlagsVertical = SizeFlags.ShrinkCenter,
-            });
+            row.AddChild(BuildCover(game, collection));
 
             var info = UiKit.Column(UiTokens.Space1);
             info.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -145,24 +116,29 @@ namespace Cthangover.BaseMenu
             info.AddChild(UiKit.Label(saves.Count == 0
                     ? TranslationServer.Translate("menu/play/no_saves")
                     : string.Format(TranslationServer.Translate("menu/play/saves"), saves.Count, newest.SaveTime.ToLocalTime().ToString("dd.MM.yy HH:mm")),
-                UiTokens.FontTiny, UiTokens.Muted));
+                UiTokens.FontSmall, UiTokens.Faint));
 
             var buttons = UiKit.Column(UiTokens.Space2);
             buttons.MouseFilter = MouseFilterEnum.Pass;
             buttons.CustomMinimumSize = new Vector2(190, 0);
             row.AddChild(buttons);
 
-            var start = UiKit.Button(TranslationServer.Translate("menu/play/new_game"), ButtonKind.Primary);
+            // With a save, Continue is the main action of the card; otherwise New game is.
+            if (newest != null)
+            {
+                var resume = UiKit.Button(TranslationServer.Translate("menu/play/continue"), ButtonKind.Primary);
+                resume.Disabled = !game.IsReady;
+                resume.Pressed += () => GameFlow.RequestLoad(this, collection.Id, newest.FileName);
+                buttons.AddChild(resume);
+            }
+
+            var start = UiKit.Button(TranslationServer.Translate("menu/play/new_game"), newest == null ? ButtonKind.Primary : ButtonKind.Secondary);
             start.Disabled = !game.IsReady;
             start.Pressed += () => GameFlow.StartGame(this, collection.Id);
             buttons.AddChild(start);
 
             if (newest != null)
             {
-                var resume = UiKit.Button(TranslationServer.Translate("menu/play/continue"));
-                resume.Disabled = !game.IsReady;
-                resume.Pressed += () => GameFlow.RequestLoad(this, collection.Id, newest.FileName);
-                buttons.AddChild(resume);
 
                 var browse = UiKit.Button(TranslationServer.Translate("menu/play/browse_saves"));
                 browse.Pressed += () => SavesRequested?.Invoke(collection.Id);
@@ -185,6 +161,38 @@ namespace Cthangover.BaseMenu
             }
 
             return card;
+        }
+
+        /// <summary>The collection's cover in a 16:9 frame; a game without one shows the first letter of its name.</summary>
+        private static Control BuildCover(ModCollectionGameSummary game, ModCollection collection)
+        {
+            var frame = new PanelContainer
+            {
+                CustomMinimumSize = new Vector2(208, 117),
+                SizeFlagsVertical = SizeFlags.ShrinkBegin,
+                MouseFilter = MouseFilterEnum.Ignore,
+            };
+            frame.AddThemeStyleboxOverride("panel", UiKit.Frame(UiTokens.RadiusSm, UiTokens.Well, UiTokens.Line));
+
+            var cover = GameCatalog.LoadCover(collection);
+            if (cover != null)
+            {
+                frame.AddChild(new TextureRect
+                {
+                    Texture = cover,
+                    ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                    StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+                    MouseFilter = MouseFilterEnum.Ignore,
+                });
+                return frame;
+            }
+
+            var name = game.Name ?? collection.Id;
+            var letter = UiKit.Label(string.IsNullOrEmpty(name) ? "?" : name.Substring(0, 1).ToUpperInvariant(), UiTokens.FontH1, UiTokens.Faint);
+            letter.HorizontalAlignment = HorizontalAlignment.Center;
+            letter.VerticalAlignment = VerticalAlignment.Center;
+            frame.AddChild(letter);
+            return frame;
         }
 
         private static (string Text, Color Color) Status(ModCollectionGameSummary game)

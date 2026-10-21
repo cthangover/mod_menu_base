@@ -35,7 +35,7 @@ namespace Cthangover.BaseMenu
         /// refresh their translated button text.
         /// </summary>
         public event Action LanguageChanged;
-        private const string Header = "Window/Column/Header/Row/";
+        private const string Header = MenuWindowShell.Header;
         private const string Pages = "Window/Column/Body/Pages/";
         private const string Audio = Pages + "Audio/";
         private const string Display = Pages + "Display/";
@@ -81,20 +81,8 @@ namespace Cthangover.BaseMenu
 
         public override void _Ready()
         {
-            CthangoverTheme.Apply(this);
-            GetNode<ColorRect>("Backdrop").Color = UiTokens.Backdrop;
-            GetNode<PanelContainer>("Window").AddThemeStyleboxOverride("panel", UiKit.Frame(UiTokens.RadiusLg, UiTokens.Surface0, UiTokens.Line));
-            GetNode<ColorRect>("Window/Column/RuleHeader").Color = UiTokens.Line;
-            GetNode<ColorRect>("Window/Column/RuleFooter").Color = UiTokens.Line;
-
-            var title = GetNode<Label>(Header + "Title");
-            title.AddThemeFontSizeOverride("font_size", UiTokens.FontTitle);
-            title.AddThemeColorOverride("font_color", UiTokens.InkBright);
-            RegisterLabel(title, "menu/settings");
-
-            var close = GetNode<Button>(Header + "CloseButton");
-            CthangoverTheme.ApplyIcon(close);
-            close.Pressed += OnBackPressed;
+            MenuWindowShell.Style(this, OnBackPressed);
+            RegisterLabel(GetNode<Label>(Header + "Title"), "menu/settings");
 
             _tabButtons = new[]
             {
@@ -138,7 +126,7 @@ namespace Cthangover.BaseMenu
             _fpsSelect = GetNode<OptionButton>(Display + "FpsRow/FpsSelect");
             _vsyncToggle = GetNode<CheckButton>(Display + "VSyncRow/VSyncToggle");
             _resHint = GetNode<Label>(Display + "ResHint");
-            StyleHint(_resHint);
+            MenuWindowShell.StyleHint(_resHint);
 
             GetNode<PanelContainer>(Mods + "ModListPanel").AddThemeStyleboxOverride("panel", ListPanelStyle());
             _modListContainer = GetNode<VBoxContainer>(Mods + "ModListPanel/Column/ModScroll/ModList");
@@ -151,7 +139,6 @@ namespace Cthangover.BaseMenu
             CthangoverTheme.ApplyDanger(_resetButton);
             _resetButton.Pressed += OnResetPressed;
             _footerHint = GetNode<Label>("Window/Column/Footer/Row/Hint");
-            StyleHint(_footerHint);
             RegisterLabel(_footerHint, "settings/saved_at_once");
 
             RegisterSection(Pages + "General/LangSection", "settings/language");
@@ -233,15 +220,8 @@ namespace Cthangover.BaseMenu
         private void RegisterSection(string path, string key)
         {
             var label = GetNode<Label>(path);
-            label.AddThemeFontSizeOverride("font_size", UiTokens.FontSmall);
-            label.AddThemeColorOverride("font_color", UiTokens.Muted);
+            MenuWindowShell.StyleSection(label);
             RegisterLabel(label, key);
-        }
-
-        private static void StyleHint(Label label)
-        {
-            label.AddThemeFontSizeOverride("font_size", UiTokens.FontBodySmall);
-            label.AddThemeColorOverride("font_color", UiTokens.Faint);
         }
 
         private static StyleBoxFlat ListPanelStyle()
@@ -261,7 +241,6 @@ namespace Cthangover.BaseMenu
             }
             for (var i = 0; i < _tabButtons.Length; i++)
                 _tabButtons[i].Text = TranslationServer.Translate(TabKeys[i]);
-            GetNode<Button>(Header + "CloseButton").TooltipText = TranslationServer.Translate("settings/back");
             UpdateResetButton();
             PopulateLangOptions();
             PopulateDisplayOptions();

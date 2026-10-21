@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Cthangover.Core.Games;
 using Cthangover.Core.Scenes;
 using Cthangover.Core.Settings;
 using Cthangover.Core.UI;
@@ -70,7 +71,8 @@ namespace Cthangover.BaseMenu
             _saveLoadMenu.Visible = false;
             AddChild(_saveLoadMenu);
 
-            _gamePicker = new GamePickerPanel { Name = "GamePickerPanel" };
+            _gamePicker = new ModScenePrefab("scenes/menu/game_picker.tscn").Instantiate<GamePickerPanel>();
+            _gamePicker.Name = "GamePickerPanel";
             AddChild(_gamePicker);
             _gamePicker.SavesRequested += gameId =>
             {
@@ -89,6 +91,29 @@ namespace Cthangover.BaseMenu
             CheckModCompilationErrors();
 
             RefreshButtons();
+            StartWarmUp();
+        }
+
+        /// <summary>
+        /// Compiles the mods of every ready game into the assembly cache in the
+        /// background while the player looks at the menu (<see cref="GameSession.WarmUp"/>),
+        /// the last played game first, so Play / Continue / Load only load
+        /// cached assemblies instead of compiling behind the loading screen.
+        /// </summary>
+        private static void StartWarmUp()
+        {
+            var last = LastSessionStore.Load()?.GameId;
+            var ids = new List<string>();
+            foreach (var game in GameCatalog.Games())
+            {
+                if (!game.IsReady)
+                    continue;
+                if (string.Equals(game.Collection.Id, last, System.StringComparison.OrdinalIgnoreCase))
+                    ids.Insert(0, game.Collection.Id);
+                else
+                    ids.Add(game.Collection.Id);
+            }
+            GameSession.WarmUp(ids);
         }
 
         /// <summary>

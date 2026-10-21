@@ -1,0 +1,111 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="src/GamePickerPanel.cs" id="GamePickerScript"]
+
+[node name="GamePickerPanel" type="Control" unique_id=352232428]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("GamePickerScript")
+
+[node name="Backdrop" type="ColorRect" parent="." unique_id=1612952176]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.9)
+
+[node name="Window" type="PanelContainer" parent="." unique_id=788680784]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -520.0
+offset_top = -360.0
+offset_right = 520.0
+offset_bottom = 360.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Column" type="VBoxContainer" parent="Window" unique_id=1513362382]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Header" type="MarginContainer" parent="Window/Column" unique_id=1901680926]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Row" type="HBoxContainer" parent="Window/Column/Header" unique_id=897579862]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Title" type="Label" parent="Window/Column/Header/Row" unique_id=1589586692]
+layout_mode = 2
+size_flags_vertical = 4
+text = "Choose a game"
+uppercase = true
+
+[node name="Spacer" type="Control" parent="Window/Column/Header/Row" unique_id=1565293582]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="CloseButton" type="Button" parent="Window/Column/Header/Row" unique_id=392870380]
+layout_mode = 2
+custom_minimum_size = Vector2(38, 38)
+size_flags_vertical = 4
+focus_mode = 0
+text = "✕"
+
+[node name="RuleHeader" type="ColorRect" parent="Window/Column" unique_id=1522041891]
+custom_minimum_size = Vector2(0, 1)
+layout_mode = 2
+
+[node name="Body" type="MarginContainer" parent="Window/Column" unique_id=897575893]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="Scroll" type="ScrollContainer" parent="Window/Column/Body" unique_id=1648576427]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="List" type="VBoxContainer" parent="Window/Column/Body/Scroll" unique_id=355317885]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="RuleFooter" type="ColorRect" parent="Window/Column" unique_id=866559016]
+custom_minimum_size = Vector2(0, 1)
+layout_mode = 2
+
+[node name="Footer" type="MarginContainer" parent="Window/Column" unique_id=508767107]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 12
+
+[node name="Row" type="HBoxContainer" parent="Window/Column/Footer" unique_id=1496801409]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Hint" type="Label" parent="Window/Column/Footer/Row" unique_id=1150953277]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4

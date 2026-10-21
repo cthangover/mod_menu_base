@@ -11,8 +11,9 @@ using Godot;
 namespace Cthangover.BaseMenu
 {
     /// <summary>
-    /// Save/load browser with unlimited slots. The grid shows 4×3 slots per
-    /// screen and scrolls past that. Saves belong to games: in a game the
+    /// Save/load browser with unlimited slots, in the menu window shell
+    /// (<see cref="MenuWindowShell"/>; the game selector sits in the header).
+    /// The grid shows 3×2 slots per screen and scrolls past that. Saves belong to games: in a game the
     /// panel shows that game's slots (save mode appends one empty "new"
     /// slot); from the front-end the selector at the top switches between
     /// games with saves and the saves made before games existed. Loading goes
@@ -25,7 +26,7 @@ namespace Cthangover.BaseMenu
         private OptionButton _gameSelect;
         private SaveSlotList _slotList;
         private Label _emptyLabel;
-        private Button _backBtn;
+        private Label _hint;
 
         private bool _isLoadMode;
         private string _gameId;
@@ -39,17 +40,16 @@ namespace Cthangover.BaseMenu
 
         public override void _Ready()
         {
-            _titleLabel = GetNode<Label>("Panel/Margin/VBox/Title");
-            _gameSelect = GetNode<OptionButton>("Panel/Margin/VBox/GameSelect");
-            _slotList = GetNode<SaveSlotList>("Panel/Margin/VBox/Scroll/SlotGrid");
-            _emptyLabel = GetNode<Label>("Panel/Margin/VBox/EmptyLabel");
-            _backBtn = GetNode<Button>("Panel/Margin/VBox/BackBtn");
-            CthangoverTheme.ApplyIcon(_backBtn);
+            MenuWindowShell.Style(this, OnBackPressed);
+            _titleLabel = GetNode<Label>(MenuWindowShell.Header + "Title");
+            _gameSelect = GetNode<OptionButton>(MenuWindowShell.Header + "GameSelect");
+            _slotList = GetNode<SaveSlotList>(MenuWindowShell.Body + "Content/Scroll/SlotGrid");
+            _emptyLabel = GetNode<Label>(MenuWindowShell.Body + "Content/EmptyLabel");
+            _emptyLabel.AddThemeColorOverride("font_color", UiTokens.Faint);
+            _hint = GetNode<Label>(MenuWindowShell.Footer + "Hint");
 
             _slotList.SlotPressed += OnSlotPressed;
             _gameSelect.ItemSelected += OnGameSelected;
-            _backBtn.Pressed += OnBackPressed;
-            _backBtn.Text = TranslationServer.Translate("settings/back");
             Visible = false;
         }
 
@@ -69,6 +69,7 @@ namespace Cthangover.BaseMenu
         {
             _isLoadMode = load;
             _titleLabel.Text = TranslationServer.Translate(load ? "ui/load/title" : "ui/save/title");
+            _hint.Text = TranslationServer.Translate(load ? "menu/load/hint" : "menu/save/hint");
             BuildGameSelect(gameId);
             Visible = true;
             CallDeferred(nameof(RefreshSlots));

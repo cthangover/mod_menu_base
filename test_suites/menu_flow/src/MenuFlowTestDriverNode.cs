@@ -19,7 +19,8 @@ namespace Mods.MenuFlowTest
     /// without a game); Play opens a card per game; the save browser lists a
     /// game's save; a player's own game can be deleted from the collection
     /// editor (a built-in one cannot) while its mods stay; the composition of
-    /// a game is computed without loading it; Continue sees the last session. Prints <c>[TEST_RESULT] name=menu_flow</c>.
+    /// a game is computed without loading it; Continue sees the last session.
+    /// <c>--shots=&lt;dir&gt;</c> saves the game picker and the save browser. Prints <c>[TEST_RESULT] name=menu_flow</c>.
     /// </summary>
     public partial class MenuFlowTestDriverNode : Node
     {
@@ -96,6 +97,7 @@ namespace Mods.MenuFlowTest
                 {
                     var picker = Menu.GetNodeOrNull<GamePickerPanel>("GamePickerPanel");
                     Check("Play opens the game picker", picker?.Visible == true);
+                    Shot("game_picker");
                     var games = GameCatalog.Games();
                     var newGameText = TranslationServer.Translate("menu/play/new_game").ToString();
                     var startButtons = Buttons(picker).Where(b => b.Text == newGameText).ToList();
@@ -155,6 +157,7 @@ namespace Mods.MenuFlowTest
                     var slots = browser.FindChildren("*", "", true, false).OfType<SaveSlotItem>().ToList();
                     Check("save browser lists the game's save", slots.Any(s => s.Model?.FileName == Slot));
                     Check("save list carries the game id", SaveService.ListSaves(GameId).Any(s => s.FileName == Slot && s.GameId == GameId));
+                    Shot("save_browser");
                     browser.Visible = false;
 
                     var composition = GameCatalog.Composition(GameId);
@@ -173,6 +176,22 @@ namespace Mods.MenuFlowTest
             }
 
             step++;
+        }
+
+        /// <summary>With <c>--shots=&lt;dir&gt;</c> saves the window as <paramref name="name"/>.png (windowed runs only).</summary>
+        private void Shot(string name)
+        {
+            string dir = null;
+            foreach (var arg in OS.GetCmdlineUserArgs())
+            {
+                if (arg.StartsWith("--shots="))
+                    dir = arg.Substring("--shots=".Length);
+            }
+            if (string.IsNullOrEmpty(dir) || DisplayServer.GetName() == "headless")
+                return;
+            dir = ProjectSettings.GlobalizePath(dir);
+            Directory.CreateDirectory(dir);
+            GetViewport().GetTexture().GetImage().SavePng(Path.Combine(dir, name + ".png"));
         }
 
         private Button DeleteButton()

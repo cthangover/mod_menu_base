@@ -17,7 +17,8 @@ namespace Mods.NewGameTest
     /// Plays the games the way a player does, in ONE process: no restart
     /// happens anywhere, every game switch replaces the mod set in place.
     /// <list type="number">
-    /// <item>Front-end menu → Play → the <c>cthangover</c> card → New game: the
+    /// <item>The front-end menu warms every game's mods up in the background;
+    /// once done, Play → the <c>cthangover</c> card → New game: the
     /// process switches to the game, enters <c>prolog_alley</c> and the opening
     /// dialog about the hungover Marao is clicked through.</item>
     /// <item>Hot reload inside the game (forced reload of <c>cthangover_party</c>):
@@ -105,8 +106,13 @@ namespace Mods.NewGameTest
             switch (step)
             {
                 case 0:
-                    if (!Boot.IsReady || !PressMenuPlay())
+                    // The menu compiles the games' mods in the background; the switch
+                    // below must then only load them from the cache (see the log).
+                    if (!Boot.IsReady || GetTree().CurrentScene is not Cthangover.BaseMenu.MainMenu || GameSession.IsWarmingUp)
                         return;
+                    if (!PressMenuPlay())
+                        return;
+                    Check("the menu warmed the games up in the background", true);
                     Check("front-end menu offers Play", ActiveGame.IsFrontendOnly);
                     break;
 

@@ -2,88 +2,86 @@
 
 [ext_resource type="Script" path="src/SaveSlotItem.cs" id="SaveSlotItemScript"]
 
-[node name="SaveSlotItem" type="Control" unique_id=2135443384]
-custom_minimum_size = Vector2(120, 120)
+[node name="SaveSlotItem" type="Control" unique_id=1515573353]
+custom_minimum_size = Vector2(160, 140)
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("SaveSlotItemScript")
 
-[node name="Background" type="ColorRect" parent="." unique_id=255218239]
+[node name="Card" type="PanelContainer" parent="." unique_id=368114590]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.12, 0.12, 0.12, 0.9)
+mouse_filter = 2
 
-[node name="ScreenshotRect" type="TextureRect" parent="." unique_id=1290008068]
-layout_mode = 1
-anchors_preset = -1
-anchor_right = 1.0
-anchor_bottom = 0.55
-grow_horizontal = 2
-grow_vertical = 2
+[node name="Column" type="VBoxContainer" parent="Card" unique_id=1588140578]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Shot" type="PanelContainer" parent="Card/Column" unique_id=1733920571]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="ScreenshotRect" type="TextureRect" parent="Card/Column/Shot" unique_id=1172880873]
+layout_mode = 2
+mouse_filter = 2
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 6
 
-[node name="DateLabel" type="Label" parent="." unique_id=408317888]
-layout_mode = 1
-anchors_preset = -1
-anchor_left = 0.02
-anchor_top = 0.57
-anchor_right = 0.98
-anchor_bottom = 0.68
-grow_horizontal = 2
-theme_override_font_sizes/font_size = 12
+[node name="Info" type="MarginContainer" parent="Card/Column" unique_id=288868314]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 10
 
-[node name="SceneLabel" type="Label" parent="." unique_id=1968956898]
-layout_mode = 1
-anchors_preset = -1
-anchor_left = 0.02
-anchor_top = 0.70
-anchor_right = 0.98
-anchor_bottom = 0.80
-grow_horizontal = 2
-theme_override_font_sizes/font_size = 11
+[node name="Column" type="VBoxContainer" parent="Card/Column/Info" unique_id=700616276]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
 
-[node name="TimeLabel" type="Label" parent="." unique_id=698436659]
-layout_mode = 1
-anchors_preset = -1
-anchor_left = 0.02
-anchor_top = 0.83
-anchor_right = 0.56
-anchor_bottom = 0.95
-grow_horizontal = 2
-theme_override_font_sizes/font_size = 10
+[node name="DateLabel" type="Label" parent="Card/Column/Info/Column" unique_id=931970274]
+layout_mode = 2
+clip_text = true
 
-[node name="StatsLabel" type="Label" parent="." unique_id=400000001]
-layout_mode = 1
-anchors_preset = -1
-anchor_left = 0.58
-anchor_top = 0.83
-anchor_right = 0.98
-anchor_bottom = 0.95
-grow_horizontal = 2
-theme_override_font_sizes/font_size = 10
+[node name="SceneLabel" type="Label" parent="Card/Column/Info/Column" unique_id=1597878703]
+layout_mode = 2
+clip_text = true
+
+[node name="Meta" type="HBoxContainer" parent="Card/Column/Info/Column" unique_id=1948773627]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TimeLabel" type="Label" parent="Card/Column/Info/Column/Meta" unique_id=729436693]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StatsLabel" type="Label" parent="Card/Column/Info/Column/Meta" unique_id=381078225]
+layout_mode = 2
 horizontal_alignment = 2
 
-[node name="EmptyLabel" type="Label" parent="." unique_id=1262712091]
+[node name="EmptyLabel" type="Label" parent="." unique_id=1904510000]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 14
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="SlotButton" type="Button" parent="." unique_id=1877010914]
+[node name="SlotButton" type="Button" parent="." unique_id=1369022409]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+focus_mode = 0
 flat = true
