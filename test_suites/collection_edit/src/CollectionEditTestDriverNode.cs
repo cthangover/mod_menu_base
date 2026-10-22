@@ -46,6 +46,7 @@ namespace Mods.CollectionEditTest
         private readonly List<string> failures = new();
         private readonly List<string> enteredScenes = new();
         private readonly List<(string From, string To)> movedAside = new();
+        private bool startedOnPlayerPackage;
         private int passed;
         private int step;
         private double elapsed;
@@ -114,7 +115,15 @@ namespace Mods.CollectionEditTest
                         return;
                     Check($"game '{GameId}' entered ('{enteredScenes[0]}')", true);
                     Check("a freshly entered game matches its collection", !GameCatalog.IsActiveOutdated());
-                    Check($"'{AddedMod}' is not loaded before the edit", !EditorsLoaded);
+                    MoveUserPackageAside();
+                    // A player's own package of the game (say, with the editors added) was what
+                    // the game started on: then the editors may already be loaded and New game
+                    // need not switch the set. The package is restored at the end.
+                    startedOnPlayerPackage = movedAside.Count > 0;
+                    if (startedOnPlayerPackage)
+                        GameLogger.Log("TEST", "CollectionEditTest: the game started on the player's own package; the before/switch checks are skipped");
+                    else
+                        Check($"'{AddedMod}' is not loaded before the edit", !EditorsLoaded);
 
                     AddEditorsToCollection();
                     Check("the edited collection makes the running game outdated", GameCatalog.IsActiveOutdated());
@@ -158,7 +167,8 @@ namespace Mods.CollectionEditTest
                     if (Busy || ActiveGame.Id != GameId || enteredScenes.Count == 0)
                         return;
                     var reload = ModManager.Instance.LastReload;
-                    Check("New game after the edit switched the mod set", reload?.Applied == true && reload.Plan?.Load.Contains(AddedMod) == true);
+                    if (!startedOnPlayerPackage)
+                        Check("New game after the edit switched the mod set", reload?.Applied == true && reload.Plan?.Load.Contains(AddedMod) == true);
                     Check($"'{AddedMod}' is loaded after the edit", EditorsLoaded);
                     Check($"'{StudioMod}' is loaded after the edit", ModRegistry.Instance.Mods.ContainsKey(StudioMod));
                     Check("the studio's button is on the game's toolbar", HasToolbarButton(StudioButtonTooltip()));
@@ -178,7 +188,6 @@ namespace Mods.CollectionEditTest
         /// </summary>
         private void AddEditorsToCollection()
         {
-            MoveUserPackageAside();
             var source = GameCatalog.LoadCollections()[GameId];
             var edited = JsonSerializer.Deserialize<ModCollection>(JsonSerializer.Serialize(source));
             edited.Package = source.Package;
@@ -192,7 +201,10 @@ namespace Mods.CollectionEditTest
 
         private void MoveUserPackageAside()
         {
-            var root = ModCollectionStore.UserPath;
+            // UserPath ends with a separator: without the trim the "parent" is the
+            // collections folder itself, the backup was scanned as a package and
+            // Cleanup's RemoveUser(GameId) deleted the player's package with it.
+            var root = ModCollectionStore.UserPath.TrimEnd('/', '\\');
             foreach (var path in new[] { Path.Combine(root, GameId), Path.Combine(root, GameId + ".zip") })
             {
                 var aside = Path.Combine(Path.GetDirectoryName(root) ?? root, $"collection_edit_backup_{Path.GetFileName(path)}");
