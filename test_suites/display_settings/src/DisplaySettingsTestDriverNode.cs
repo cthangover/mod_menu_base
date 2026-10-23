@@ -6,6 +6,7 @@ using Cthangover.Core.Bootstrap;
 using Cthangover.Core.Mods;
 using Cthangover.Core.Settings;
 using Cthangover.Core.Utils;
+using Cthangover.Mods.Interface.View;
 using Godot;
 
 namespace Mods.DisplaySettingsTest
@@ -203,7 +204,7 @@ namespace Mods.DisplaySettingsTest
             var dir = ProjectSettings.GlobalizePath(shotsDir);
             Directory.CreateDirectory(dir);
             var path = Path.Combine(dir, name + ".png");
-            GetViewport().GetTexture().GetImage().SavePng(path);
+            ViewportCapture.SavePng(GetViewport(), path);
             GameLogger.Log("TEST", $"DisplaySettingsTest: screenshot {path}");
         }
 

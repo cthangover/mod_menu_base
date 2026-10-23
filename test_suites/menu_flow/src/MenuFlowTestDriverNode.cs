@@ -9,6 +9,7 @@ using Cthangover.Core.Games;
 using Cthangover.Core.Mods;
 using Cthangover.Core.Settings;
 using Cthangover.Core.Utils;
+using Cthangover.Mods.Interface.View;
 using Godot;
 
 namespace Mods.MenuFlowTest
@@ -191,7 +192,7 @@ namespace Mods.MenuFlowTest
                 return;
             dir = ProjectSettings.GlobalizePath(dir);
             Directory.CreateDirectory(dir);
-            GetViewport().GetTexture().GetImage().SavePng(Path.Combine(dir, name + ".png"));
+            ViewportCapture.SavePng(GetViewport(), Path.Combine(dir, name + ".png"));
         }
 
         private Button DeleteButton()
