@@ -42,7 +42,7 @@ namespace Cthangover.BaseMenu
         private const string Mods = Pages + "Mods/";
 
         /// <summary>Names of <see cref="LanguageCode.Supported"/>, same order.</summary>
-        private static readonly string[] LanguageKeys = { "settings/lang_ru", "settings/lang_en", "settings/lang_zh" };
+        private static readonly string[] LanguageKeys = { "settings/lang_ru", "settings/lang_en", "settings/lang_es", "settings/lang_zh", "settings/lang_ja", "settings/lang_ko", "settings/lang_vi" };
 
         private static readonly string[] TabKeys = { "settings/tab_general", "settings/tab_audio", "settings/tab_display", "settings/tab_mods" };
 

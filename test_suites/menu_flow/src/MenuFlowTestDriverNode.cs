@@ -211,7 +211,7 @@ namespace Mods.MenuFlowTest
                 SaveId = Slot,
                 Timestamp = DateTime.UtcNow,
                 CoreVersion = "0.1.0",
-                Game = new SaveGameInfo { Id = GameId, Name = "Novel Template", Version = "1.0.0" },
+                Game = new SaveGameInfo { Id = GameId, Name = "My Novel", Version = "1.0.0" },
             };
             package.ModData[SavePackage.CoreSlotKey] = new ModSlot();
             var dir = ProjectSettings.GlobalizePath(SaveService.GameDirectory(GameId));
