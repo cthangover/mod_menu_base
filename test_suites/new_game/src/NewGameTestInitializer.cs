@@ -19,7 +19,7 @@ namespace Mods.NewGameTest
 
             queued = true;
             GameLogger.Log("TEST", "NewGameTest: activating");
-            (Godot.Engine.GetMainLoop() as SceneTree)?.Root?.CallDeferred("add_child", new NewGameTestDriverNode());
+            ModRoot.AddDeferred(new NewGameTestDriverNode());
         }
     }
 }

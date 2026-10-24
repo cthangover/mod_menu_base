@@ -19,7 +19,7 @@ namespace Mods.MenuFlowTest
 
             queued = true;
             GameLogger.Log("TEST", "MenuFlowTest: activating");
-            (Godot.Engine.GetMainLoop() as SceneTree)?.Root?.CallDeferred("add_child", new MenuFlowTestDriverNode());
+            ModRoot.AddDeferred(new MenuFlowTestDriverNode());
         }
     }
 }

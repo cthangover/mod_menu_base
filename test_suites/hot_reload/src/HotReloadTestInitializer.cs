@@ -19,7 +19,7 @@ namespace Mods.HotReloadTest
 
             queued = true;
             GameLogger.Log("TEST", "HotReloadTest: activating");
-            (Godot.Engine.GetMainLoop() as SceneTree)?.Root?.CallDeferred("add_child", new HotReloadTestDriverNode());
+            ModRoot.AddDeferred(new HotReloadTestDriverNode());
         }
     }
 }
