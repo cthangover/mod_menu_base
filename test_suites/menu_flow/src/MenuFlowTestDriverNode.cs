@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cthangover.BaseMenu;
 using Cthangover.Core.Bootstrap;
 using Cthangover.Core.Games;
+using Cthangover.Core.Localization;
 using Cthangover.Core.Mods;
 using Cthangover.Core.Settings;
 using Cthangover.Core.Utils;
@@ -86,6 +87,7 @@ namespace Mods.MenuFlowTest
                     Check("front-end only", ActiveGame.IsFrontendOnly && !ActiveGame.IsActive);
                     Check("menu mods loaded", ModRegistry.Instance.Mods.ContainsKey("menu_base") && ModRegistry.Instance.Mods.ContainsKey("mod_manager"));
                     Check("game content not loaded", !ModRegistry.Instance.Mods.ContainsKey("cthangover_game"));
+                    CheckUnloadedModTitle("cooking");
                     Check("Play button shown", Menu.FindChild("play", true, false) is Button);
                     Check("New game hidden without a game", Menu.FindChild("new_game", true, false) == null);
                     break;
@@ -228,6 +230,26 @@ namespace Mods.MenuFlowTest
             var last = ProjectSettings.GlobalizePath("user://last_session.json");
             if (File.Exists(last))
                 File.Delete(last);
+        }
+
+        /// <summary>The mod manager lists mods the shell does not load: their names come in the current language.</summary>
+        private void CheckUnloadedModTitle(string modId)
+        {
+            // Russian, not the run's English: an English name would equal the manifest's fallback.
+            var was = TranslationServer.GetLocale();
+            LocaleLoader.LoadLocale("ru");
+            var mod = ModRegistry.Instance.AllDiscoveredMods.GetValueOrDefault(modId);
+            var lines = mod?.FileProvider.ReadFileText($"locale/{TranslationServer.GetLocale()}.properties")?.Split('\n');
+            string Text(string key)
+            {
+                var line = lines?.FirstOrDefault(l => l.StartsWith(key + " ") || l.StartsWith(key + "="));
+                return line?.Substring(line.IndexOf('=') + 1).Trim();
+            }
+
+            Check($"{modId} not loaded, its name in '{TranslationServer.GetLocale()}': {mod?.DisplayTitle}",
+                !ModRegistry.Instance.Mods.ContainsKey(modId) && Text($"mod_{modId}_name") is { } name && mod.DisplayTitle == name
+                && Text($"mod_{modId}_desc") is { } desc && mod.LocalizedDescription == desc);
+            LocaleLoader.LoadLocale(was);
         }
 
         private void Check(string name, bool ok)
