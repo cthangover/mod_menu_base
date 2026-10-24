@@ -19,7 +19,7 @@ namespace Mods.CollectionEditTest
 
             queued = true;
             GameLogger.Log("TEST", "CollectionEditTest: activating");
-            (Godot.Engine.GetMainLoop() as SceneTree)?.Root?.CallDeferred("add_child", new CollectionEditTestDriverNode());
+            ModRoot.AddDeferred(new CollectionEditTestDriverNode());
         }
     }
 }

@@ -19,7 +19,7 @@ namespace Mods.SaveDormancyTest
 
             queued = true;
             GameLogger.Log("TEST", "SaveDormancyTest: activating");
-            (Godot.Engine.GetMainLoop() as SceneTree)?.Root?.CallDeferred("add_child", new SaveDormancyTestDriverNode());
+            ModRoot.AddDeferred(new SaveDormancyTestDriverNode());
         }
     }
 }

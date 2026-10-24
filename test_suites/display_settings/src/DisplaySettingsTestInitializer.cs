@@ -27,7 +27,7 @@ namespace Mods.DisplaySettingsTest
 
             queued = true;
             GameLogger.Log("TEST", "DisplaySettingsTest: activating");
-            (Godot.Engine.GetMainLoop() as SceneTree)?.Root?.CallDeferred("add_child", new DisplaySettingsTestDriverNode(shots));
+            ModRoot.AddDeferred(new DisplaySettingsTestDriverNode(shots));
         }
     }
 }
