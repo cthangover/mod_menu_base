@@ -129,7 +129,7 @@ namespace Mods.SaveDormancyTest
             foreach (var failure in failures)
                 GameLogger.Log("TEST", $"SaveDormancyTest: failed: {failure}");
             GameLogger.Log("TEST", $"[TEST_RESULT] name=save_dormancy passed={passed} failed={failures.Count}");
-            GetTree().Quit(failures.Count == 0 ? 0 : 1);
+            Cthangover.Core.Bootstrap.ApplicationExit.Quit(GetTree(), failures.Count == 0 ? 0 : 1);
         }
     }
 }

@@ -140,10 +140,10 @@ namespace Cthangover.BaseMenu
             host.GetNodeOrNull<SettingsMenu>("SettingsPanel")?.Open();
         }
 
-        /// <summary>Quits the application immediately via <c>SceneTree.Quit</c>.</summary>
+        /// <summary>Quits the application after engine mods finish their registered cleanup.</summary>
         public static void Exit(Control host)
         {
-            host.GetTree().Quit();
+            Cthangover.Core.Bootstrap.ApplicationExit.Quit(host.GetTree());
         }
     }
 }

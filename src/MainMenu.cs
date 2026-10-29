@@ -5,7 +5,6 @@ using Cthangover.Core.Settings;
 using Cthangover.Core.UI;
 using Cthangover.Core.UI.Menu;
 using Cthangover.Core.UI.Theming;
-using Cthangover.Core.UI.Tool;
 using Cthangover.Core.Utils;
 using Godot;
 
@@ -14,11 +13,10 @@ namespace Cthangover.BaseMenu
 {
     /// <summary>
     /// Title screen main menu, fully driven by <see cref="MenuRegistry"/>. The scene
-    /// only defines named section containers (game, mods, exit, tools); every button —
+    /// only defines named section containers (game, mods, exit); every button —
     /// built-in or mod-provided — is created from registry entries, so mods can add,
-    /// replace or re-order entries without touching this scene. Below the sections,
-    /// every registered tool appends its own launcher button via
-    /// <see cref="IToolProvider.AddMenuButton"/>, so no tool list is hardcoded here.
+    /// replace or re-order entries without touching this scene. Authoring tools
+    /// are launched from the in-game toolbar.
     /// If GameLogger reports mod compilation errors, a popup lists them. The
     /// SettingsMenu and SaveLoadMenu panels are instantiated at ready time but stay
     /// hidden; they are registered in <see cref="MenuRegistry"/> as panels "settings"
@@ -50,7 +48,7 @@ namespace Cthangover.BaseMenu
 
         /// <summary>
         /// Assembles the runtime UI: theme, hidden settings and save/load panels,
-        /// telegram link wiring, scene manager initialization and registry/tool
+        /// telegram link wiring, scene manager initialization and registry
         /// driven buttons.
         /// </summary>
         private void BuildUi()
@@ -87,7 +85,6 @@ namespace Cthangover.BaseMenu
             sceneManager.Initialize();
 
             BuildRegistryButtons();
-            BuildToolButtons();
             CheckModCompilationErrors();
 
             RefreshButtons();
@@ -118,8 +115,8 @@ namespace Cthangover.BaseMenu
 
         /// <summary>
         /// Creates one button per <see cref="MenuRegistry"/> entry, routed to the
-        /// section container matching its <c>Section</c> ("game", "mods", "exit",
-        /// "tools"). Runs after <see cref="SceneManager.Initialize"/> because the
+        /// section container matching its <c>Section</c> ("game", "mods", "exit").
+        /// Runs after <see cref="SceneManager.Initialize"/> because the
         /// registry is built during boot and filled by mod initializers; the
         /// defensive Initialize call keeps direct scene launches working. Each
         /// button's translation key is registered so <see cref="RefreshButtons"/>
@@ -132,34 +129,11 @@ namespace Cthangover.BaseMenu
                 { "game", GetNode<Container>("MenuContainer/GameButtons") },
                 { MenuButtonEntry.SectionMods, GetNode<Container>("MenuContainer/ModMenuButtons") },
                 { "exit", GetNode<Container>("MenuContainer/ExitButtons") },
-                { "tools", GetNode<Container>("MenuContainer/ToolMenuButtons") },
             };
             MenuBuilder.Build(this, sections);
 
             foreach (var container in sections.Values)
                 MenuBuilder.CollectLocaleKeys(container, _btnKeys);
-        }
-
-        /// <summary>
-        /// Lets every registered tool append its launcher button to the tool block
-        /// below Exit (<c>MenuContainer/ToolMenuButtons</c>). Tools register
-        /// themselves in <see cref="ToolFactory"/>, so the block stays empty when no
-        /// tools are installed and needs no changes when a mod introduces a new tool.
-        /// Each button carries its translation key in metadata, keeping
-        /// <see cref="RefreshButtons"/> aware of it.
-        /// </summary>
-        private void BuildToolButtons()
-        {
-            var container = GetNodeOrNull<VBoxContainer>("MenuContainer/ToolMenuButtons");
-            if (container == null)
-                return;
-
-            foreach (var tool in ToolFactory.Instance.GetAll())
-                tool.AddMenuButton(container);
-
-            MenuBuilder.CollectLocaleKeys(container, _btnKeys);
-
-            GameLogger.Log("MAIN_MENU", $"Built {container.GetChildCount()} tool button(s)");
         }
 
         private void CheckModCompilationErrors()

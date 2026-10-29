@@ -38,7 +38,11 @@ namespace Mods.CollectionEditTest
 
         private const string GameId = "novel_template";
         private const string AddedToolset = "dev_tools";
-        private const string AddedMod = "editor_tools";
+        private static readonly string[] AddedMods =
+        {
+            "scenario_editor", "scene_editor", "scene_builder", "map_editor",
+            "interactive_editor", "light_editor", "catalog_export"
+        };
         private const string StudioMod = "scenario_studio";
         private const string GameMenuId = "game_menu";
         private const float TimeoutSeconds = 240f;
@@ -97,7 +101,7 @@ namespace Mods.CollectionEditTest
 
         private static bool Busy => GameSession.IsSwitching || ModManager.Instance.IsReloading || ModHotReloadService.IsReloadRunning;
 
-        private static bool EditorsLoaded => ModRegistry.Instance.Mods.ContainsKey(AddedMod);
+        private static bool EditorsLoaded => AddedMods.All(ModRegistry.Instance.Mods.ContainsKey);
 
         /// <summary>Scenes of the game entered since the last clear; the main menu does not count.</summary>
         private void OnSceneEntered(SceneEnteredEvent e)
@@ -123,7 +127,7 @@ namespace Mods.CollectionEditTest
                     if (startedOnPlayerPackage)
                         GameLogger.Log("TEST", "CollectionEditTest: the game started on the player's own package; the before/switch checks are skipped");
                     else
-                        Check($"'{AddedMod}' is not loaded before the edit", !EditorsLoaded);
+                        Check("individual editors are not loaded before the edit", !AddedMods.Any(ModRegistry.Instance.Mods.ContainsKey));
 
                     AddEditorsToCollection();
                     Check("the edited collection makes the running game outdated", GameCatalog.IsActiveOutdated());
@@ -168,8 +172,8 @@ namespace Mods.CollectionEditTest
                         return;
                     var reload = ModManager.Instance.LastReload;
                     if (!startedOnPlayerPackage)
-                        Check("New game after the edit switched the mod set", reload?.Applied == true && reload.Plan?.Load.Contains(AddedMod) == true);
-                    Check($"'{AddedMod}' is loaded after the edit", EditorsLoaded);
+                        Check("New game after the edit switched the mod set", reload?.Applied == true && AddedMods.All(id => reload.Plan?.Load.Contains(id) == true));
+                    Check("all seven individual editors are loaded after the edit", EditorsLoaded);
                     Check($"'{StudioMod}' is loaded after the edit", ModRegistry.Instance.Mods.ContainsKey(StudioMod));
                     Check("the studio's button is on the game's toolbar", HasToolbarButton(StudioButtonTooltip()));
                     Check("the game matches its edited collection", !GameCatalog.IsActiveOutdated());
@@ -309,7 +313,7 @@ namespace Mods.CollectionEditTest
             foreach (var failure in failures)
                 GameLogger.Log("TEST", $"CollectionEditTest: failed: {failure}");
             GameLogger.Log("TEST", $"[TEST_RESULT] name=collection_edit passed={passed} failed={failures.Count}");
-            GetTree().Quit(failures.Count == 0 ? 0 : 1);
+            Cthangover.Core.Bootstrap.ApplicationExit.Quit(GetTree(), failures.Count == 0 ? 0 : 1);
         }
     }
 }

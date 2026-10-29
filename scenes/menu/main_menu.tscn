@@ -52,14 +52,6 @@ layout_mode = 2
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="space2" type="Control" parent="MenuContainer" unique_id=1261364549]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-
-[node name="ToolMenuButtons" type="VBoxContainer" parent="MenuContainer" unique_id=43694906]
-layout_mode = 2
-theme_override_constants/separation = 12
-
 [node name="CenterContainer" type="AspectRatioContainer" parent="." unique_id=1751426695]
 layout_mode = 1
 anchors_preset = -1

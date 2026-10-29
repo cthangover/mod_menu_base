@@ -313,7 +313,7 @@ namespace HotReloadProbeApp
             foreach (var failure in failures)
                 GameLogger.Log("TEST", $"HotReloadTest: failed: {failure}");
             GameLogger.Log("TEST", $"[TEST_RESULT] name=hot_reload passed={passed} failed={failures.Count}");
-            GetTree().Quit(failures.Count == 0 ? 0 : 1);
+            Cthangover.Core.Bootstrap.ApplicationExit.Quit(GetTree(), failures.Count == 0 ? 0 : 1);
         }
     }
 }
