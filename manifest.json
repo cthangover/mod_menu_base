@@ -3,7 +3,7 @@
   "name": "Menu",
   "version": "1.0.0",
   "author": "ct",
-  "description": "Registry-driven main menu: built-in buttons, settings and save/load panels moved out of the core.",
+  "description": "The main menu: start or continue a game, pick one of the installed games, load a save and change the language, sound and display settings.",
   "category": "ui",
   "sources": [
     "src/**/*.cs"
