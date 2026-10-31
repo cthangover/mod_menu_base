@@ -6,6 +6,7 @@ using Cthangover.Core.Games;
 using Cthangover.Core.Mods;
 using Cthangover.Core.Settings;
 using Cthangover.Core.UI.Theming;
+using Cthangover.Core.Utils;
 using Godot;
 
 namespace Cthangover.BaseMenu
@@ -56,7 +57,8 @@ namespace Cthangover.BaseMenu
                     return;
                 }
 
-                ChooseGameForSave(host, fileName);
+                // Saves without a game are not offered by the menu (no adoption of old saves).
+                GameLogger.Log("SAVE", $"Save '{fileName}' has no game and cannot be loaded from the menu", LogLevel.Error);
                 return;
             }
 
@@ -126,50 +128,6 @@ namespace Cthangover.BaseMenu
             => ModRegistry.Instance.AllDiscoveredMods.TryGetValue(modId, out var info) && !string.IsNullOrEmpty(info.DisplayTitle)
                 ? $"{info.DisplayTitle} ({modId})"
                 : modId;
-
-        /// <summary>A save made before games existed: the player picks the game it belongs to; it moves there.</summary>
-        private static void ChooseGameForSave(Node host, string fileName)
-        {
-            var games = GameCatalog.Games().Where(g => g.IsReady).ToList();
-            if (games.Count == 0)
-            {
-                Confirm(host, TranslationServer.Translate("menu/load/legacy_title"),
-                    TranslationServer.Translate("menu/load/legacy_no_games"), null, null);
-                return;
-            }
-
-            var select = new OptionButton();
-            foreach (var game in games)
-                select.AddItem(game.Name ?? game.Collection.Id);
-
-            var content = new VBoxContainer();
-            content.AddChild(new Label
-            {
-                Text = TranslationServer.Translate("menu/load/legacy_text"),
-                AutowrapMode = TextServer.AutowrapMode.WordSmart,
-                CustomMinimumSize = new Vector2(420, 0),
-            });
-            content.AddChild(select);
-
-            var dialog = new ConfirmationDialog
-            {
-                Title = TranslationServer.Translate("menu/load/legacy_title"),
-                OkButtonText = TranslationServer.Translate("menu/load/legacy_ok"),
-                CancelButtonText = TranslationServer.Translate("ui/save/cancel_button"),
-                Exclusive = true,
-            };
-            dialog.AddChild(content);
-            dialog.Confirmed += () =>
-            {
-                var gameId = games[Math.Max(0, select.Selected)].Collection.Id;
-                dialog.QueueFree();
-                var slot = SaveService.AdoptLegacySave(fileName, gameId);
-                RequestLoad(host, gameId, slot);
-            };
-            dialog.Canceled += dialog.QueueFree;
-            host.AddChild(dialog);
-            dialog.PopupCentered();
-        }
 
         /// <summary>Message or confirmation dialog; without <paramref name="onConfirm"/> it is a plain notice.</summary>
         public static void Confirm(Node host, string title, string text, string okText, Action onConfirm)

@@ -1,0 +1,8 @@
+{
+  "name": "Resettables Test",
+  "description": "Integration test mod: switches games in one process (rpg_plus, novel_template, rpg_plus) and then starts a new game. The stats owner of a mod that leaves the set must be dropped with it, the reloaded mod must register exactly one new owner, its old context must be released, and New game must reset the state of the loaded mod. Activated only by --itest=resettables (with --frontend).",
+  "sources": [
+    "src/*.cs"
+  ],
+  "depends": []
+}
