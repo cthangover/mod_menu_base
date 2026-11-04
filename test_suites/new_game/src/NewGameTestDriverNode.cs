@@ -21,7 +21,7 @@ namespace Mods.NewGameTest
     /// once done, Play → the <c>cthangover</c> card → New game: the
     /// process switches to the game, enters <c>prolog_alley</c> and the opening
     /// dialog about the hungover Marao is clicked through.</item>
-    /// <item>Hot reload inside the game (forced reload of <c>cthangover_party</c>):
+    /// <item>Hot reload inside the game (forced reload of <c>cthangover_game</c>):
     /// the session is parked, the mod reloads into a new context and the game
     /// comes back in <c>prolog_alley</c>.</item>
     /// <item>Back to the menu → <c>novel_template</c>: mods outside that game are
@@ -41,7 +41,7 @@ namespace Mods.NewGameTest
         private const string MainGame = "cthangover";
         private const string SecondGame = "novel_template";
         private const string PrologScene = "prolog_alley";
-        private const string HotReloadedMod = "cthangover_party";
+        private const string HotReloadedMod = "cthangover_game";
         private const float TimeoutSeconds = 420f;
 
         private readonly List<string> failures = new();
@@ -106,6 +106,12 @@ namespace Mods.NewGameTest
             switch (step)
             {
                 case 0:
+                    // The launcher precedes MainMenu; let its Play action enter the menu before waiting for warm-up.
+                    if (Boot.IsReady && GetTree().CurrentScene?.FindChild("LauncherPlay", true, false) is Button)
+                    {
+                        PressMenuPlay();
+                        return;
+                    }
                     // The menu compiles the games' mods in the background; the switch
                     // below must then only load them from the cache (see the log).
                     if (!Boot.IsReady || GetTree().CurrentScene is not Cthangover.BaseMenu.MainMenu || GameSession.IsWarmingUp)
@@ -243,6 +249,8 @@ namespace Mods.NewGameTest
             if (picker?.Visible != true)
                 return false;
             var game = FindGame(gameId);
+            if (game != null && !game.IsReady)
+                GameLogger.Log("TEST", $"NewGameTest: unavailable '{gameId}': missing=[{string.Join(", ", game.MissingIds)}], versions=[{string.Join(", ", game.MismatchIds)}], collection problems={game.ProblemsCount}");
             Check($"game '{gameId}' is listed and ready", game?.IsReady == true);
             var start = StartButton(picker, game?.Name ?? gameId);
             Check($"'{gameId}' card has an enabled New game button", start is { Disabled: false });
