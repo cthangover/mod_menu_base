@@ -27,7 +27,7 @@ While you look at the menu, the games' mods are prepared in the background; the 
 
 ![The Load window for My Novel with one save, "Day 1, 00:00", and the hint "Click a save to load it".](assets/load.jpg)
 
-If the game's mods changed since the save was made, a **The game has changed** window lists what was added (starts from scratch), removed (its data is kept and returns if turned on again) or updated, and makes a backup of the save before loading. Saves from before games existed appear under **Saves without a game**; you choose the game they belong to and the file moves there.
+If the game's mods changed since the save was made, a **The game has changed** window lists what was added (starts from scratch), removed (its data is kept and returns if turned on again) or updated, and makes a backup of the save before loading. Saves are listed per game. Saves without a game cannot be assigned to a game or loaded from the normal menu.
 
 During a game, saving and loading use the same window through the in-game menu: click a slot to save, a used slot is overwritten after confirmation, **+ New save** adds one.
 

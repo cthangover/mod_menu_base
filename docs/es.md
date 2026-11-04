@@ -27,7 +27,7 @@ Mientras miras el menú, los mods de los juegos se preparan en segundo plano; la
 
 ![La ventana de carga de My Novel con una partida, "Day 1, 00:00", y la pista "Click a save to load it".](assets/load.jpg)
 
-Si los mods del juego han cambiado desde que se hizo la partida, una ventana **El juego ha cambiado** enumera lo que se añadió (empieza de cero), lo que se quitó (sus datos se conservan y vuelven si se activa de nuevo) y lo que se actualizó, y hace una copia de seguridad de la partida antes de cargarla. Las partidas de antes de que existieran los juegos aparecen en **Partidas sin juego**; eliges a qué juego pertenecen y el archivo se muda allí.
+Si los mods del juego han cambiado desde que se hizo la partida, una ventana **El juego ha cambiado** enumera lo que se añadió (empieza de cero), lo que se quitó (sus datos se conservan y vuelven si se activa de nuevo) y lo que se actualizó, y hace una copia de seguridad de la partida antes de cargarla. Las partidas se listan por juego. Una partida sin juego no se puede asignar a otro juego ni cargar desde el menú normal.
 
 Dentro de un juego, guardar y cargar usan la misma ventana desde el menú del juego: haz clic en una ranura para guardar, una ranura usada se sobrescribe tras confirmar, y **+ Nueva partida guardada** añade una más.
 

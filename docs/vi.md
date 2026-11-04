@@ -27,7 +27,7 @@ Trong khi bạn xem menu, mod của các game đang được chuẩn bị ở n�
 
 ![Cửa sổ tải của My Novel với một bản lưu, "Day 1, 00:00", và gợi ý "Click a save to load it".](assets/load.jpg)
 
-Nếu mod của game đã thay đổi từ lúc tạo bản lưu, cửa sổ **Game đã thay đổi** sẽ liệt kê cái được thêm (bắt đầu từ đầu), cái bị gỡ (dữ liệu được giữ và trở lại nếu bật lại) hay được cập nhật, và sao lưu bản lưu trước khi tải. Những bản lưu từ trước khi có khái niệm game nằm dưới **Bản lưu không có game**; bạn chọn game chúng thuộc về và tệp sẽ chuyển tới đó.
+Nếu mod của game đã thay đổi từ lúc tạo bản lưu, cửa sổ **Game đã thay đổi** sẽ liệt kê cái được thêm (bắt đầu từ đầu), cái bị gỡ (dữ liệu được giữ và trở lại nếu bật lại) hay được cập nhật, và sao lưu bản lưu trước khi tải. Bản lưu được liệt kê theo từng game. Không thể gán bản lưu không có game cho một game hoặc tải nó từ menu thông thường.
 
 Trong lúc chơi, lưu và tải dùng chung một cửa sổ qua menu trong game: nhấp vào một ô để lưu, ô đã dùng bị ghi đè sau khi xác nhận, **+ Bản lưu mới** thêm ô mới.
 
