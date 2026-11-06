@@ -184,6 +184,7 @@ namespace Cthangover.BaseMenu
                     StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
                     MouseFilter = MouseFilterEnum.Ignore,
                 });
+                frame.AddChild(UiKit.DevelopmentFrame(collection.Version));
                 return frame;
             }
 
@@ -192,6 +193,7 @@ namespace Cthangover.BaseMenu
             letter.HorizontalAlignment = HorizontalAlignment.Center;
             letter.VerticalAlignment = VerticalAlignment.Center;
             frame.AddChild(letter);
+            frame.AddChild(UiKit.DevelopmentFrame(collection.Version));
             return frame;
         }
 

@@ -38,6 +38,9 @@ namespace Mods.MenuFlowTest
         private double stepAt;
         private bool done;
         private Node hub;
+        private string initialLocale;
+        private int languageIndex;
+        private bool languageReady;
 
         public override void _Process(double delta)
         {
@@ -85,6 +88,7 @@ namespace Mods.MenuFlowTest
                     if (GetTree().CurrentScene is not MainMenu)
                         return;
                     Check("front-end only", ActiveGame.IsFrontendOnly && !ActiveGame.IsActive);
+                    initialLocale = TranslationServer.GetLocale();
                     Check("menu mods loaded", ModRegistry.Instance.Mods.ContainsKey("menu_base") && ModRegistry.Instance.Mods.ContainsKey("mod_manager"));
                     Check("game content not loaded", !ModRegistry.Instance.Mods.ContainsKey("cthangover_game"));
                     CheckUnloadedModTitle("cooking");
@@ -100,8 +104,28 @@ namespace Mods.MenuFlowTest
                 {
                     var picker = Menu.GetNodeOrNull<GamePickerPanel>("GamePickerPanel");
                     Check("Play opens the game picker", picker?.Visible == true);
+                    if (languageIndex <= LanguageCode.Supported.Length)
+                    {
+                        if (!languageReady)
+                        {
+                            LocaleLoader.LoadLocale(languageIndex < LanguageCode.Supported.Length
+                                ? LanguageCode.Supported[languageIndex] : initialLocale);
+                            picker.Open();
+                            languageReady = true;
+                            return;
+                        }
+                        if (languageIndex < LanguageCode.Supported.Length)
+                        {
+                            CheckPickerLanguage(picker, LanguageCode.Supported[languageIndex]);
+                            languageIndex++;
+                            languageReady = false;
+                            return;
+                        }
+                        languageIndex++;
+                    }
                     Shot("game_picker");
                     var games = GameCatalog.Games();
+                    CheckDevelopmentCovers(picker, games);
                     var newGameText = TranslationServer.Translate("menu/play/new_game").ToString();
                     var startButtons = Buttons(picker).Where(b => b.Text == newGameText).ToList();
                     Check($"one card per game ({games.Count})", games.Count >= 2 && startButtons.Count == games.Count);
@@ -201,6 +225,43 @@ namespace Mods.MenuFlowTest
         {
             var text = TranslationServer.Translate("mod_manager/collection_delete").ToString();
             return Buttons(hub).FirstOrDefault(b => b.Text == text && b.IsVisibleInTree());
+        }
+
+        private void CheckDevelopmentCovers(GamePickerPanel picker, IReadOnlyList<ModCollectionGameSummary> games)
+        {
+            var frames = picker.FindChildren("DevelopmentFrame", "", true, false).OfType<TextureRect>().ToList();
+            Check("one development overlay per game cover", frames.Count == games.Count);
+            Check("development overlays match game versions", frames.Select(f => f.Visible).SequenceEqual(
+                games.Select(g => VersionHelper.IsInDevelopment(g.Collection.Version))));
+            Check("game overlays have generated art and pass clicks through", frames.All(f =>
+                f.Texture != null && f.MouseFilter == Control.MouseFilterEnum.Ignore));
+            Check("game version reset keeps every built-in game playable", games.Where(g =>
+                g.Collection.Origin == ModCollectionOrigin.BuiltIn).All(g => g.Collection.Version == "0.1.0" && g.IsReady));
+        }
+
+        private void CheckPickerLanguage(GamePickerPanel picker, string language)
+        {
+            var expectedCaptions = new[] { "В разработке", "In development", "En desarrollo", "开发中", "開発中", "개발 중", "Đang phát triển" };
+            var expected = expectedCaptions[languageIndex];
+            var frames = picker.FindChildren("DevelopmentFrame", "", true, false).OfType<TextureRect>().ToList();
+            Check($"{language}: development captions are translated", frames.Count > 0 && frames.All(f =>
+                f.GetNode<Label>("Plaque/Caption").Tr("ui/cover/in_development").ToString() == expected));
+            foreach (var frame in frames)
+            {
+                var caption = frame.GetNode<Label>("Plaque/Caption");
+                Check($"{language}: rendered caption fits the plaque", caption.GetTotalCharacterCount() == expected.Length
+                    && caption.GetThemeFont("font").GetStringSize(expected, fontSize: caption.GetThemeFontSize("font_size")).X <= caption.Size.X);
+                Check($"{language}: blank plaque replaces baked text", frame.GetNode<TextureRect>("Plaque/Blank").Texture is AtlasTexture);
+                Check($"{language}: caption follows cover size", frame.GetNode<Control>("Plaque").Scale.IsEqualApprox(frame.Size / frame.Texture.GetSize()));
+            }
+
+            var junior = GameCatalog.Games().First(g => g.Collection.Id == "junior_reaper_paper_grief");
+            var entry = junior.Collection.Locale.FirstOrDefault(l => l.Lang == language);
+            Check($"{language}: Junior Reaper has a translated description", !string.IsNullOrWhiteSpace(entry?.Description)
+                && junior.Description == entry.Description && (language == "ru" || junior.Description != junior.Collection.GetLocalizedDescription("ru")));
+            Check($"{language}: the game card shows the translated description", picker.FindChildren("*", "Label", true, false)
+                .OfType<Label>().Any(l => l.Text == junior.Description));
+            Shot("game_picker_" + language);
         }
 
         private static IEnumerable<Button> Buttons(Node root)
