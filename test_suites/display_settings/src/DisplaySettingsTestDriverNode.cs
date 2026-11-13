@@ -24,6 +24,9 @@ namespace Mods.DisplaySettingsTest
     /// </summary>
     public partial class DisplaySettingsTestDriverNode : Node
     {
+        private int readinessToken = int.MinValue;
+        private ulong readinessStarted;
+        private ulong readinessFrame;
         private const string Display = "Window/Column/Body/Pages/Display/";
         private const float TimeoutSeconds = 60f;
         private const string ResetButton = "Window/Column/Footer/Row/ResetButton";
@@ -38,7 +41,6 @@ namespace Mods.DisplaySettingsTest
         private int step;
         private int shotTab;
         private double elapsed;
-        private double stepAt;
         private bool done;
 
         public DisplaySettingsTestDriverNode(string shotsDir)
@@ -47,6 +49,7 @@ namespace Mods.DisplaySettingsTest
             backup = File.Exists(settingsPath) ? File.ReadAllText(settingsPath) : null;
         }
 
+        /// <summary>Advances when observable scene/UI readiness has held for two real frames; the watchdog remains active.</summary>
         public override void _Process(double delta)
         {
             if (done)
@@ -60,9 +63,6 @@ namespace Mods.DisplaySettingsTest
                 return;
             }
 
-            if (elapsed - stepAt < 0.5)
-                return;
-            stepAt = elapsed;
 
             try
             {
@@ -75,8 +75,39 @@ namespace Mods.DisplaySettingsTest
             }
         }
 
+        // Deferred UI/scene work must finish before the original assertions run.
+        private bool WaitForReadyFrames(int token, bool ready, double timeoutSeconds = 30)
+        {
+            var now = global::Godot.Time.GetTicksMsec();
+            if (readinessToken != token)
+            {
+                readinessToken = token;
+                readinessStarted = now;
+                readinessFrame = 0;
+            }
+            if (now - readinessStarted > timeoutSeconds * 1000)
+                throw new global::System.TimeoutException($"readiness at step {token}: scene/UI did not become ready");
+            if (!ready) { readinessFrame = 0; return false; }
+            if (readinessFrame == 0) readinessFrame = global::Godot.Engine.GetProcessFrames();
+            return global::Godot.Engine.GetProcessFrames() - readinessFrame >= 2;
+        }
+
+        private bool DisplayReady()
+        {
+            if (step == 0) return true;
+            if (menu == null || !menu.Visible) return false;
+            return step switch
+            {
+                2 => DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Windowed && DisplayServer.WindowGetSize() == WindowSize,
+                3 or 6 => DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Fullscreen,
+                5 => DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Windowed,
+                _ => true
+            };
+        }
+
         private void RunStep()
         {
+            if (!WaitForReadyFrames(step * 10 + shotTab, Boot.IsReady && GetTree().CurrentScene != null && DisplayReady(), 30)) return;
             switch (step)
             {
                 case 0:

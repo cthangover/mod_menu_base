@@ -26,6 +26,9 @@ namespace Mods.MenuFlowTest
     /// </summary>
     public partial class MenuFlowTestDriverNode : Node
     {
+        private int readinessToken = int.MinValue;
+        private ulong readinessStarted;
+        private ulong readinessFrame;
         private const string GameId = "novel_template";
         private const string Slot = "slot_942";
         private const string DeletableId = "menu_flow_deletable";
@@ -35,13 +38,13 @@ namespace Mods.MenuFlowTest
         private int passed;
         private int step;
         private double elapsed;
-        private double stepAt;
         private bool done;
         private Node hub;
         private string initialLocale;
         private int languageIndex;
         private bool languageReady;
 
+        /// <summary>Advances when observable scene/UI readiness has held for two real frames; the watchdog remains active.</summary>
         public override void _Process(double delta)
         {
             if (done)
@@ -55,9 +58,6 @@ namespace Mods.MenuFlowTest
                 return;
             }
 
-            if (elapsed - stepAt < 0.5)
-                return;
-            stepAt = elapsed;
 
             try
             {
@@ -72,8 +72,26 @@ namespace Mods.MenuFlowTest
 
         private Control Menu => GetTree().CurrentScene as Control;
 
+        // Deferred UI/scene work must finish before the original assertions run.
+        private bool WaitForReadyFrames(int token, bool ready, double timeoutSeconds = 30)
+        {
+            var now = global::Godot.Time.GetTicksMsec();
+            if (readinessToken != token)
+            {
+                readinessToken = token;
+                readinessStarted = now;
+                readinessFrame = 0;
+            }
+            if (now - readinessStarted > timeoutSeconds * 1000)
+                throw new global::System.TimeoutException($"readiness at step {token}: scene/UI did not become ready");
+            if (!ready) { readinessFrame = 0; return false; }
+            if (readinessFrame == 0) readinessFrame = global::Godot.Engine.GetProcessFrames();
+            return global::Godot.Engine.GetProcessFrames() - readinessFrame >= 2;
+        }
+
         private void RunStep()
         {
+            if (!WaitForReadyFrames(step * 100 + languageIndex * 2 + (languageReady ? 1 : 0), Boot.IsReady && Menu != null && !Cthangover.Core.Scenes.GodotSceneService.IsTransitioning, 30)) return;
             switch (step)
             {
                 case 0:
