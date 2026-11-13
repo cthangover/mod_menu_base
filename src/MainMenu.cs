@@ -46,6 +46,12 @@ namespace Cthangover.BaseMenu
 
 
 
+        /// <summary>Cancels menu-owned compilation when the title screen leaves the tree.</summary>
+        public override void _ExitTree()
+        {
+            GameSession.StopWarmUp();
+        }
+
         /// <summary>
         /// Assembles the runtime UI: theme, hidden settings and save/load panels,
         /// telegram link wiring, scene manager initialization and registry
