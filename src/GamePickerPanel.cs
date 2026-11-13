@@ -222,7 +222,7 @@ namespace Cthangover.BaseMenu
             var catalog = CatalogService.CachedEntries ?? new List<CatalogExportEntry>();
             var graph = ModCollectionResolver.Resolve(collection, collections, ModRegistry.Instance.AllDiscoveredMods,
                 DisabledModsStore.Load(), catalog, _sessionInstalled);
-            var ok = await ModCollectionInstaller.ApplyAsync(ModCollectionPlan.Build(graph, catalog), _sessionInstalled);
+            var ok = await ModCollectionInstaller.ApplyAsync(ModCollectionPlan.Build(graph, catalog), _sessionInstalled, collection, collections);
             if (!IsInstanceValid(this))
                 return;
 
