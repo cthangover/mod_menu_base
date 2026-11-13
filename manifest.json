@@ -1,14 +1,14 @@
 {
   "id": "menu_base",
   "name": "Menu",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "author": "ct",
   "description": "The main menu: start or continue a game, pick one of the installed games, load a save and change the language, sound and display settings.",
   "category": "ui",
   "sources": [
     "src/**/*.cs"
   ],
-  "depends": ["ui_base>=1", "music_pack>=1"],
+  "depends": ["ui_base>=0.1.0", "music_pack>=0.1.0"],
   "test_suites": [
     {"id": "menu_flow", "activate": ["--itest=menu_flow"]},
     {"id": "save_dormancy", "activate": ["--itest=save_dormancy"]},

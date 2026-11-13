@@ -73,7 +73,7 @@ namespace Mods.SaveDormancyTest
 
             // Simulate a save written while the game still had the mechanic, and
             // before this test mod joined the game.
-            var absentSlot = new ModSlot { Metadata = new ModMetadata { ModId = AbsentMod, ModVersion = "1.1.0" } };
+            var absentSlot = new ModSlot { Metadata = new ModMetadata { ModId = AbsentMod, ModVersion = "0.1.0" } };
             absentSlot.Data["marker"] = new DataBlob(1, new Dictionary<string, string> { ["value"] = "42" });
             package.ModData[AbsentMod] = absentSlot;
             package.ModData.Remove("menu_base__save_dormancy");

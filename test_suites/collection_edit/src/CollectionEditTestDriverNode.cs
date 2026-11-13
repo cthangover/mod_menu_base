@@ -196,7 +196,7 @@ namespace Mods.CollectionEditTest
             var edited = JsonSerializer.Deserialize<ModCollection>(JsonSerializer.Serialize(source));
             edited.Package = source.Package;
             edited.Includes ??= new List<ModCollectionInclude>();
-            edited.Includes.Add(new ModCollectionInclude { Ref = AddedToolset + ">=1", Role = "tools" });
+            edited.Includes.Add(new ModCollectionInclude { Ref = AddedToolset + ">=0.1.0", Role = "tools" });
 
             var user = ModCollectionStore.LoadUser().Where(c => !string.Equals(c.Id, GameId, StringComparison.OrdinalIgnoreCase)).ToList();
             user.Add(edited);

@@ -5,6 +5,6 @@
     "src/*.cs"
   ],
   "depends": [
-    "mod_manager>=1"
+    "mod_manager>=0.1.0"
   ]
 }

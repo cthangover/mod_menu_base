@@ -227,8 +227,8 @@ namespace Mods.HotReloadTest
             var data = Path.Combine(modsRoot, DataId);
             Directory.CreateDirectory(Path.Combine(data, "characters"));
             File.WriteAllText(Path.Combine(data, "manifest.json"),
-                "{ \"id\": \"" + DataId + "\", \"name\": \"Hot reload probe data\", \"version\": \"1.0.0\", \"author\": \"test\", " +
-                "\"depends\": [\"characters_base>=1\"] }");
+                "{ \"id\": \"" + DataId + "\", \"name\": \"Hot reload probe data\", \"version\": \"0.1.0\", \"author\": \"test\", " +
+                "\"depends\": [\"characters_base>=0.1.0\"] }");
             File.WriteAllText(Path.Combine(data, "characters", "probe.json"),
                 "{ \"Kind\": \"character\", \"Items\": [ { \"Id\": \"" + ProbeCharacterId + "\", \"Name\": \"" + name + "\", \"Health\": 1 } ] }");
         }
@@ -238,8 +238,8 @@ namespace Mods.HotReloadTest
             var app = Path.Combine(modsRoot, AppId);
             Directory.CreateDirectory(Path.Combine(app, "src"));
             File.WriteAllText(Path.Combine(app, "manifest.json"),
-                "{ \"id\": \"" + AppId + "\", \"name\": \"Hot reload probe app\", \"version\": \"1.0.0\", \"author\": \"test\", " +
-                "\"sources\": [\"src/*.cs\"], \"depends\": [\"" + LibId + ">=1\"] }");
+                "{ \"id\": \"" + AppId + "\", \"name\": \"Hot reload probe app\", \"version\": \"0.1.0\", \"author\": \"test\", " +
+                "\"sources\": [\"src/*.cs\"], \"depends\": [\"" + LibId + ">=0.1.0\"] }");
             File.WriteAllText(Path.Combine(app, "src", "ProbeApp.cs"), ProbeAppSource);
             WriteLib(version, compiles: true);
         }
@@ -249,7 +249,7 @@ namespace Mods.HotReloadTest
             var lib = Path.Combine(modsRoot, LibId);
             Directory.CreateDirectory(Path.Combine(lib, "src"));
             File.WriteAllText(Path.Combine(lib, "manifest.json"),
-                "{ \"id\": \"" + LibId + "\", \"name\": \"Hot reload probe library\", \"version\": \"1.0.0\", \"author\": \"test\", \"sources\": [\"src/*.cs\"] }");
+                "{ \"id\": \"" + LibId + "\", \"name\": \"Hot reload probe library\", \"version\": \"0.1.0\", \"author\": \"test\", \"sources\": [\"src/*.cs\"] }");
             var body = compiles ? "\"" + version + "\";" : "\"" + version + "\"";
             File.WriteAllText(Path.Combine(lib, "src", "ProbeLib.cs"),
                 "namespace HotReloadProbe\n{\n    public static class ProbeLib\n    {\n        public static string Value() => " + body + "\n    }\n}\n");

@@ -190,7 +190,7 @@ namespace Mods.MenuFlowTest
                     var composition = GameCatalog.Composition(GameId);
                     Check("composition computed without loading the game", composition?.Any(m => m.Id == "my_novel_game") == true);
                     var diff = SaveCompositionDiff.Compute(
-                        new[] { new SaveGameMod { Id = "cthangover_game", Version = "2.0.0" }, new SaveGameMod { Id = "ghost_mechanic", Version = "1.0.0" } },
+                        new[] { new SaveGameMod { Id = "cthangover_game", Version = "0.1.0" }, new SaveGameMod { Id = "ghost_mechanic", Version = "1.0.0" } },
                         composition);
                     Check("comparison reports removed and added mechanics", diff.Removed.Contains("ghost_mechanic") && diff.Added.Contains("my_novel_game"));
 
@@ -274,7 +274,7 @@ namespace Mods.MenuFlowTest
                 SaveId = Slot,
                 Timestamp = DateTime.UtcNow,
                 CoreVersion = "0.1.0",
-                Game = new SaveGameInfo { Id = GameId, Name = "My Novel", Version = "1.0.0" },
+                Game = new SaveGameInfo { Id = GameId, Name = "My Novel", Version = "0.1.0" },
             };
             package.ModData[SavePackage.CoreSlotKey] = new ModSlot();
             var dir = ProjectSettings.GlobalizePath(SaveService.GameDirectory(GameId));
