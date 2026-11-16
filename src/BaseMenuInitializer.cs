@@ -1,10 +1,7 @@
 using System;
 using Cthangover.Core.Games;
 using Cthangover.Core.Mods;
-using Cthangover.Core.Scenes;
-using Cthangover.Core.Settings;
 using Cthangover.Core.UI.Menu;
-using Godot;
 
 namespace Cthangover.BaseMenu
 {
@@ -13,25 +10,41 @@ namespace Cthangover.BaseMenu
     /// in <see cref="MenuRegistry"/>. Runs from
     /// <c>ModInitializerRegistry.NotifyResourcesReady</c>, which fires after the
     /// registry itself is built, so these entries are appended to live registry
-    /// state rather than collected from a manifest.
+    /// state rather than collected from a manifest. Repeated ready notifications
+    /// reuse the registration while its owned panel remains in the registry;
+    /// clearing the registry permits registration in the replacement generation.
     /// </summary>
     public class BaseMenuInitializer : IModInitializer
     {
         private const string ModId = "menu_base";
 
+        private MenuPanelEntry settingsPanel;
+
+        /// <summary>
+        /// Defers menu registration until every mod's resource declarations are available.
+        /// </summary>
         public void OnModLoaded(string modId)
         {
         }
 
+        /// <summary>
+        /// Adds the menu once per registry lifetime without hiding conflicts with another provider's entries.
+        /// </summary>
         public void OnModResourcesReady()
         {
-            MenuRegistry.RegisterMenuPanel(new MenuPanelEntry
+            if (settingsPanel != null && ReferenceEquals(MenuRegistry.GetPanelById(settingsPanel.Id), settingsPanel))
+            {
+                return;
+            }
+
+            settingsPanel = new MenuPanelEntry
             {
                 Id = "settings",
                 ModId = ModId,
                 ScenePath = "scenes/menu/settings_menu.tscn",
                 Locale = "menu/settings",
-            });
+            };
+            MenuRegistry.RegisterMenuPanel(settingsPanel);
             MenuRegistry.RegisterMenuPanel(new MenuPanelEntry
             {
                 Id = "save_load",
@@ -69,7 +82,7 @@ namespace Cthangover.BaseMenu
                 Section = "game",
                 Locale = "menu/newgame",
                 Index = 15,
-                Visible = () => !ActiveGame.IsFrontendOnly,
+                Visible = HasActiveGame,
                 Handler = BaseMenuActions.NewGame,
             });
             MenuRegistry.RegisterMenuButton(new MenuButtonEntry
@@ -101,49 +114,11 @@ namespace Cthangover.BaseMenu
                 Handler = BaseMenuActions.Exit,
             });
         }
-    }
 
-    /// <summary>
-    /// Handlers for the built-in menu buttons. Each receives the menu root control
-    /// so it can locate the panels instantiated as named children by
-    /// <see cref="MainMenu"/>.
-    /// </summary>
-    internal static class BaseMenuActions
-    {
-        /// <summary>
-        /// Starts a new game at the active game's entry scene (<c>start_scene</c>
-        /// when no game collection is active) through <see cref="GameSession"/>.
-        /// </summary>
-        public static void NewGame(Control host)
+        private static bool HasActiveGame()
         {
-            GameSession.StartNew(host);
-        }
-
-        /// <summary>Loads the last save of the last played game (restarting into it when needed).</summary>
-        public static void Continue(Control host) => GameFlow.Continue(host);
-
-        /// <summary>Opens the game picker.</summary>
-        public static void Play(Control host)
-        {
-            host.GetNodeOrNull<GamePickerPanel>("GamePickerPanel")?.Open();
-        }
-
-        /// <summary>Opens the save/load panel in load mode.</summary>
-        public static void Load(Control host)
-        {
-            host.GetNodeOrNull<SaveLoadMenu>("SaveLoadPanel")?.OpenForLoad();
-        }
-
-        /// <summary>Shows the settings overlay.</summary>
-        public static void Settings(Control host)
-        {
-            host.GetNodeOrNull<SettingsMenu>("SettingsPanel")?.Open();
-        }
-
-        /// <summary>Quits the application after engine mods finish their registered cleanup.</summary>
-        public static void Exit(Control host)
-        {
-            Cthangover.Core.Bootstrap.ApplicationExit.Quit(host.GetTree());
+            return !ActiveGame.IsFrontendOnly;
         }
     }
+
 }
