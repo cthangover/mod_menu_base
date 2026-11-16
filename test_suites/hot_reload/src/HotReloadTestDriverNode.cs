@@ -297,7 +297,7 @@ namespace HotReloadProbeApp
 
         public void OnModResourcesReady()
         {
-            var root = (Engine.GetMainLoop() as SceneTree)?.Root;
+            var root = (Godot.Engine.GetMainLoop() as SceneTree)?.Root;
             if (root == null)
                 return;
             root.GetNodeOrNull(""HotReloadProbeNode"")?.Free();
