@@ -423,6 +423,7 @@ namespace Cthangover.BaseMenu
             s.ResolutionHeight = defaults.ResolutionHeight;
             s.VsyncEnabled = defaults.VsyncEnabled;
             s.MaxFps = defaults.MaxFps;
+            s.RenderScale3D = defaults.RenderScale3D;
             DisplaySettingsService.Apply(s);
             s.Save();
 
