@@ -54,6 +54,8 @@ namespace Mods.HotReloadTest
         private bool done;
         private GameLaunchArgs startSelection;
         private string modsRoot;
+        private int confirmedStep = -1;
+        private ulong offerSeenAt;
 
         public override void _Ready()
         {
@@ -86,6 +88,7 @@ namespace Mods.HotReloadTest
 
             try
             {
+                ConfirmFileOffer();
                 RunStep();
             }
             catch (Exception ex)
@@ -96,6 +99,22 @@ namespace Mods.HotReloadTest
         }
 
         private static bool Busy => GameSession.IsSwitching || ModManager.Instance.IsReloading || ModHotReloadService.IsReloadRunning;
+
+        private void ConfirmFileOffer()
+        {
+            if (step < 1 || step > 5 || confirmedStep == step || Busy) return;
+            var layer = ModHotReloadService.Instance?.GetNodeOrNull<CanvasLayer>("ModReloadPrompt");
+            if (layer?.Visible != true) return;
+            var button = layer.GetNode<Button>("Reload");
+            if (!button.Visible || button.Disabled) return;
+            var now = global::Godot.Time.GetTicksMsec();
+            if (offerSeenAt == 0) offerSeenAt = now;
+            if (now - offerSeenAt < 2000) return;
+            Check("file change waits for explicit confirmation at step " + step, reloads.Count == 0);
+            button.EmitSignal(BaseButton.SignalName.Pressed);
+            confirmedStep = step;
+            offerSeenAt = 0;
+        }
 
         // Deferred UI/scene work must finish before the original assertions run.
         private bool WaitForReadyFrames(int token, bool ready, double timeoutSeconds = 30)
@@ -141,7 +160,7 @@ namespace Mods.HotReloadTest
                 case 1:
                     if (Busy || ProbeValue() != "v1")
                         return;
-                    Check("probes loaded by the watcher", AnyApplied(LoadedBoth));
+                    Check("probes loaded after confirming the watcher offer", AnyApplied(LoadedBoth));
                     Check("data probe's character is served", ProbeCharacterName() == "probe_v1");
                     CheckNoLeaks("v1");
                     reloads.Clear();
@@ -163,6 +182,7 @@ namespace Mods.HotReloadTest
                         return;
                     Check("a compile error rejects the reload", true);
                     Check("the previous code keeps running", ProbeValue() == "v2");
+                    Check("a rejected reload is visibly reported", ModHotReloadService.Instance.GetNode<Control>("ModReloadPrompt/Failure").IsVisibleInTree());
                     reloads.Clear();
                     WriteLib("v3", compiles: true);
                     break;
